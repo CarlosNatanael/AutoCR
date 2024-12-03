@@ -132,7 +132,7 @@ class Leaderboard
 	getType()
 	{
 		if (this.isTime()) return this.lower_is_better ? "speedrun" : "survival";
-		return "score";
+		return this.lower_is_better ? "min score" : "high score";
 	}
 }
 
