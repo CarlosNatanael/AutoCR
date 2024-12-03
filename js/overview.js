@@ -206,7 +206,7 @@ function make_logic_table(logic, assessment = [])
 				if (!req.flag || req.flag.hits) reqdata[9] = "(" + req.hits + ")";
 			}
 
-			for (const v of reqdata)
+			for (const [vi, v] of reqdata.entries())
 			{
 				let td = document.createElement('td');
 				let span = td.appendChild(document.createElement('span'));
@@ -223,6 +223,8 @@ function make_logic_table(logic, assessment = [])
 						pre.appendChild(document.createTextNode(note));
 					}
 				}
+				if (vi == reqdata.length - 1 && v == '(0)')
+					span.classList.add('vfade');
 				reqrow.appendChild(td);
 			}
 			logicbody.appendChild(reqrow);
