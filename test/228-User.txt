@@ -1,0 +1,9 @@
+1.3.1.0
+Super Mario World
+N0:0x000001:"Local Test Code Note #1 [8 bit]"
+N0:0x000002:"Local Test Code Note #2 [8 bit]"
+111000001:"0xH000019=0_0xH000071=9_0xH000dd0=0_d0xH000dd0=0":[LOGIC] Missing Code Note:This achievement is missing a code note for one of the addresses it uses.::::authorblues:1:::::00000
+111000002:"0xH000100=7_d0xH000dc1=0_0xH000dc1=1_I:0xW000065":[LOGIC] Bad Chain:How did you even convince RAIntegration to let you save this?:::missable:authorblues:1:::::00000
+111000003:"d0xH000dd5=0_0xH000dd5!=0":"[LOGIC] One-Condition: \"Simple\"":A one-condition achievement using two static pointers.::::authorblues:5:::::00000
+111000004:"I:0xW000065&65535_d0xH000000!=0_I:0xW000065&65535_0xH000000=0":"[LOGIC] One-Condition: \"Complex\"":A one-condition achievement using two AddAddress chains.::::authorblues:10:::::00000
+L111000005:"0xR000015=1":"0xQ000015=1":"0xQ000017=1_0xR000017=1":"M:0=0":VALUE:Test Leaderboard:Leaderboard description:1

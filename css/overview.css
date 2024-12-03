@@ -1,0 +1,371 @@
+body
+{
+	margin: 0;
+	padding: 0;
+}
+
+div#container
+{
+	position: absolute;
+	display: flex;
+	flex-direction: row;
+	width: 100%;
+	height: 100%;
+}
+
+#container > *
+{
+	display: block;
+	height: 100%;
+	margin: 0;
+}
+
+#container #asset-list
+{
+	flex: 0 0 400px;
+	height: 100%;
+
+	overflow-y: scroll;
+	overflow-x: clip;
+}
+
+footer
+{
+	float: left;
+	display: block;
+	width: 100%;
+
+	background-color: black;
+	color: white;
+
+	text-align: center;
+
+	position: fixed;
+	bottom: 0;
+}
+
+#asset-list table
+{
+	width: 100%;
+	cursor: default;
+}
+
+#asset-list thead
+{
+	font-weight: bold;
+	background-color: black;
+	color: white;
+
+	position: sticky;
+	top: 0;
+}
+
+#asset-list td
+{
+	padding: 5px 12px;
+}
+
+#asset-list tbody tr
+{
+	background-color: #F8F8F8;
+	cursor: pointer;
+}
+
+#asset-list tbody tr:nth-child(odd)
+{
+	background-color: #E8E8E8;
+}
+
+#asset-list tbody tr td.asset-name
+{
+	padding-left: 28px;
+	background-repeat: no-repeat;
+	background-position: 5px center;
+	white-space: nowrap;
+}
+
+#asset-list tbody tr.pass td.asset-name
+{ background-image: url("../img/approval-16.png"); }
+
+#asset-list tbody tr.fail
+{
+	background-color: #FFAAAA;
+}
+
+#asset-list tbody tr.fail td.asset-name
+{ background-image: url("../img/error-5-16.png"); }
+
+#asset-list tbody tr.info td.asset-name
+{ /* background-image: url("../img/alert-16.png"); */ }
+
+#asset-list tbody tr:hover
+{
+	background-color: #666666;
+	color: white;
+}
+
+#asset-list tbody tr.selected
+{
+	background-image: url("../img/arrow-37-16.png");
+	background-repeat: no-repeat;
+	background-position: left 360px center;
+}
+
+#asset-list tbody tr.asset-header
+{
+	font-weight: normal;
+	background-color: black;
+	color: white;
+
+	text-align: center;
+	cursor: default;
+}
+
+#container #asset-info
+{
+	flex: 1 1 auto;
+	height: 100%;
+
+	overflow-y: scroll;
+	overflow-x: scroll;
+}
+
+#ui-instructions
+{
+	color: red;
+	text-align: center;
+}
+
+div.instructions
+{
+	font-size: 125%;
+	line-height: 150%;
+}
+
+img.icon
+{
+	border: 1px solid black;
+	margin-right: 20px;
+	float: left;
+	display: block;
+}
+
+.hidden
+{ display: none; }
+
+#info-container
+{
+	margin: 20px;
+}
+
+.infobox h1, 
+.infobox h2, 
+.infobox h3
+{
+	margin: 0 auto;
+}
+
+#info-container .ach-label em
+{
+	color: grey;
+}
+
+#info-container .main-header,
+#info-container .main-header + div
+{
+	clear: both;
+}
+
+#info-container .main-header + div
+{
+	padding-top: 5px;
+}
+
+#info-container .data-table h3
+{
+	font-weight: bold;
+	padding-top: 20px;
+}
+
+#info-container .data-table table
+{
+	border-collapse: collapse;
+	font-family: monospace;
+	width: 100%;
+}
+
+#info-container .data-table table td
+{
+	border: 2px solid white;
+	padding: 5px 15px;
+}
+
+#info-container .data-table table tbody tr:nth-child(odd)
+{
+	background-color: #E8E8E8;
+}
+
+#info-container .data-table table tbody tr.warn,
+.warn
+{
+	background-color: #FFFF99;
+}
+
+#info-container .data-table table tbody tr.warn td:first-child
+{
+	background-repeat: no-repeat;
+	background-position: right 5px center;
+	background-image: url("../img/alert-16.png");
+}
+
+@keyframes bg-highlight
+{
+	  0% { background-color: inherit; }
+	 25% { background-color: #FF9999; }
+	 50% { background-color: inherit; }
+	100% { background-color: inherit; }
+}
+
+#info-container .data-table table tbody tr.highlight td:first-child
+{
+	animation-name: bg-highlight;
+	animation-duration: 1s;
+	animation-iteration-count: 5;
+}
+
+#info-container .data-table table thead td,
+#info-container .data-table table .header
+{
+	color: white;
+	font-weight: bold;
+	padding: 10px 15px;
+}
+
+#info-container .data-table table thead tr:nth-child(1),
+#info-container .data-table table .group-hdr
+{
+	background-color: #333333 !important;
+	text-align: center;
+}
+
+#info-container .data-table table thead tr:nth-child(2),
+#info-container .data-table table .col-hdr
+{
+	background-color: black !important;
+}
+
+.code-notes pre,
+.tooltip-info pre
+{
+	white-space: break-spaces;
+}
+
+.rich-presence pre
+{
+	white-space: pre-wrap;
+	word-break: break-all;
+	line-height: 175%;
+}
+
+/*
+	based on Okabe and Ito palette from
+	https://www.nceas.ucsb.edu/sites/default/files/2022-06/Colorblind%20Safe%20Color%20Schemes.pdf
+*/
+.rich-presence .keyword { color: rgb(128, 64, 168); }
+.rich-presence .header { background-color: rgba(204, 121, 167, 0.5); }
+.rich-presence .condition { background-color: rgba(000, 158, 115, 0.25); }
+.rich-presence .lookup { background-color: rgba(240, 228, 066, 0.5); }
+.rich-presence .link { border-bottom: 1px dotted black; cursor: pointer; }
+.rich-presence .logic { cursor: pointer; }
+.rich-presence .logic.selected { color: rgb(213, 094, 000); }
+
+.tooltip {
+	position: relative;
+	display: inline-block;
+	border-bottom: 1px dotted black;
+}
+
+.tooltip .tooltip-info
+{
+	visibility: hidden;
+	width: 350px;
+	max-width: 500px;
+	background-color: black;
+	color: #fff;
+	text-align: left;
+	padding: 5px;
+	border-radius: 6px;
+
+	/* Position the tooltip text - see examples below! */
+	position: absolute;
+	z-index: 1;
+	top: -5px;
+	right: 115%;
+}
+
+.tooltip .tooltip-info pre
+{
+	margin: 5px;
+}
+
+.tooltip:hover .tooltip-info
+{
+	visibility: visible;
+}
+
+.tooltip .tooltip-info::after
+{
+	content: " ";
+	position: absolute;
+	top: 13px;
+	left: 100%;
+	margin-top: -5px;
+	border-width: 5px;
+	border-style: solid;
+	border-color: transparent transparent transparent black;
+}
+
+ul li
+{
+	line-height: 150%;
+}
+
+.feedback .warn
+{
+	border-bottom: 1px dotted black;
+}
+
+span[title]
+{
+	cursor: help;
+	border-bottom: 1px dotted black;
+}
+
+div.chart
+{
+	display: inline-block;
+	width: 500px;
+}
+
+code
+{
+	border: 1px solid #CCCCCC;
+	background-color: #EEEEEE;
+	border-radius: 3px;
+}
+
+pre code
+{
+	padding: 10px;
+	display: block;
+}
+
+.float-right
+{
+	float: right;
+}
+
+.fade
+{
+	opacity: 75%;
+}

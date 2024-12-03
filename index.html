@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+		<title>AutoCR</title>
+		<link rel="stylesheet" href="css/overview.css">
+	</head>
+	<body>
+		<div id="container">
+			<div id="asset-list">
+				<table>
+					<thead id="list-head">
+						<tr>
+							<td>Asset</td>
+						</tr>
+					</thead>
+					<tbody id="list-body">
+					</tbody>
+				</table>
+			</div>
+			<div id="asset-info">
+				<div id="info-container">
+					<h1 id="ui-instructions">(Drag files here to load feedback)</h1>
+					<div class="instructions">
+						<ol>
+							<li>Load the game into RALibRetro (or equivalent)</li>
+							<li>Check the <code>RACache/Data/</code> folder for the following files</li>
+							<ul>
+								<li><code>[gameid].json</code></li>
+								<ul>
+									<li>contains achievement set logic</li>
+								</ul>
+								<li><code>[gameid]-Notes.json</code></li>
+								<ul>
+									<li>code notes database</li>
+								</ul>
+								<li><code>[gameid]-User.txt</code></li>
+								<ul>
+									<li>local, unpublished achievements, leaderboards, and code notes</li>
+								</ul>
+								<li><code>[gameid]-Rich.txt</code></li>
+								<ul>
+									<li>local or cached copy of rich presence script</li>
+								</ul>
+							</ul>
+							<li>Drag any/all files to this window</li>
+						</ol>
+						<p><strong>Important note #1:</strong> This tool is not a validator. If you submit a broken set, it might not parse correctly.</p>
+						<p><strong>Important note #2:</strong> All feedback is automated, and therefore imperfect. It is <em>not</em> advised to blindly make every change recommended, but rather to consider the nature of the feedback and determine for yourself whether a change might be appropriate.</p>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script src="js/logic.js"></script>
+		<script src="js/achievements.js"></script>
+		<script src="js/feedback.js"></script>
+		<script src="js/overview.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha512-ZwR1/gSZM3ai6vCdI+LVF1zSq/5HznD3ZSTk7kajkaj4D292NLuduDCO1c/NT8Id+jE58KYLKT7hXnbtryGmMg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	</body>
+</html>
