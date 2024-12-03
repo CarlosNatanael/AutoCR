@@ -300,13 +300,13 @@ class Logic
 		let logic = new Logic();
 		try
 		{
-			logic.value = value == null ? ('$' in def) : !!value;
+			logic.value = value == null ? def.contains('$') : !!value;
 			for (const [i, g] of def.split(logic.value ? "$" : /(?<!0x)S/).entries())
 			{
 				let group = [];
-				if (g.length == 0) continue; // some sets have empty core groups
-				for (const [j, req] of g.split("_").entries())
-					group.push(Requirement.fromString(req));
+				if (g.length > 0) // some sets have empty core groups
+					for (const [j, req] of g.split("_").entries())
+						group.push(Requirement.fromString(req));
 				logic.groups.push(group);
 			}
 			logic.mem = def;

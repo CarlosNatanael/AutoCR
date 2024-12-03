@@ -333,7 +333,7 @@ function assess_logic(logic)
 	for (const [gi, g] of logic.groups.entries())
 	{
 		const last = g[g.length-1];
-		if (last.flag && last.flag.chain)
+		if (last && last.flag && last.flag.chain)
 			res.add(new Issue(Feedback.BAD_CHAIN, last));
 	}
 
