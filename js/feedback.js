@@ -29,9 +29,10 @@ function titlecase_links(phrase)
 }
 
 const FeedbackSeverity = Object.freeze({
-	INFO: 0,
-	WARN: 1,
-	ERROR: 2,
+	PASS: 0,
+	INFO: 1,
+	WARN: 2,
+	ERROR: 3,
 });
 const Feedback = Object.freeze({
 	// writing policy feedback
@@ -159,6 +160,8 @@ class Assessment
 
 	add(x) { return this.issues.push(x); }
 	pass() { return this.issues.filter(x => x.type.severity > FeedbackSeverity.INFO).length == 0; }
+
+	status() { return Math.max(FeedbackSeverity.PASS, ...this.issues.map(x => x.type.severity)); }
 
 	combine(o)
 	{

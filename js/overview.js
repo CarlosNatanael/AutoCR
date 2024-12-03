@@ -1049,6 +1049,7 @@ function load_rich_presence(txt, from_file)
 	rebuild_sidebar();
 }
 
+const SEVERITY_TO_CLASS = ['pass', 'warn', 'fail', 'fail'];
 function rebuild_sidebar()
 {
 	let header;
@@ -1057,7 +1058,7 @@ function rebuild_sidebar()
 
 	if (current.set != null || current.local != null)
 	{
-		let row = add_asset_row(current.assessment.set.pass() ? 'info' : 'fail', "🔍 Set Overview");
+		let row = add_asset_row(SEVERITY_TO_CLASS[current.assessment.set.status()], "🔍 Set Overview");
 		row.onclick = function(){ show_set_overview(row); };
 		if (!post_load) post_load = row.onclick;
 		assetList.push(row);
@@ -1065,7 +1066,7 @@ function rebuild_sidebar()
 
 	if (current.notes.length > 0)
 	{
-		let row = add_asset_row(current.assessment.notes.pass() ? 'info' : 'fail', "📝 Code Notes");
+		let row = add_asset_row(SEVERITY_TO_CLASS[current.assessment.set.status()], "📝 Code Notes");
 		row.onclick = function(){ show_code_notes(row); };
 		if (!post_load) post_load = row.onclick;
 		assetList.push(row);
@@ -1073,7 +1074,7 @@ function rebuild_sidebar()
 
 	if (current.rp)
 	{
-		let row = add_asset_row(current.assessment.rp.pass() ? 'info' : 'fail', "🎮 Rich Presence");
+		let row = add_asset_row(SEVERITY_TO_CLASS[current.assessment.set.status()], "🎮 Rich Presence");
 		row.onclick = function(){ show_rich_presence(row); };
 		if (!post_load) post_load = row.onclick;
 		assetList.push(row);
@@ -1089,7 +1090,7 @@ function rebuild_sidebar()
 		for (const ach of all_achievements().sort((a, b) => a.state.rank - b.state.rank))
 		{
 			let feedback = current.assessment.achievements.get(ach.id);
-			let tr = add_asset_row(feedback.pass() ? 'pass' : 'fail', `🏆 ${ach.state.marker}${ach.title} (${ach.points})`);
+			let tr = add_asset_row(SEVERITY_TO_CLASS[feedback.status()], `🏆 ${ach.state.marker}${ach.title} (${ach.points})`);
 			tr.onclick = function(){ show_achievement(ach, tr); };
 			assetList.push(tr);
 
@@ -1106,7 +1107,7 @@ function rebuild_sidebar()
 		for (const lb of all_leaderboards().sort((a, b) => a.state.rank - b.state.rank))
 		{
 			let feedback = current.assessment.leaderboards.get(lb.id);
-			let tr = add_asset_row(feedback.pass() ? 'pass' : 'fail', `📊 ${lb.state.marker}${lb.title}`);
+			let tr = add_asset_row(SEVERITY_TO_CLASS[feedback.status()], `📊 ${lb.state.marker}${lb.title}`);
 			tr.onclick = function(){ show_leaderboard(lb, tr); };
 			assetList.push(tr);
 		}
