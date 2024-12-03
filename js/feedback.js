@@ -444,7 +444,7 @@ function assess_logic(logic)
 			}
 			else if (req.flag == ReqFlag.RESETIF && !has_hits)
 				// ResetIf with a measured should be fine in a value
-				if (!logic.value || g[i].flag == ReqFlag.MEASURED || g[i].flag == ReqFlag.MEASUREDP)
+				if (!logic.value || group_flags.has(ReqFlag.MEASURED) || group_flags.has(ReqFlag.MEASUREDP))
 					res.add(new Issue(Feedback.UUO_RESET, req,
 						["Automated recommended change:", `<pre><code>${invert_chain()}</code></pre>`]));
 			else if (req.flag == ReqFlag.RESETIF && req.hits == 1)
