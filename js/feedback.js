@@ -89,7 +89,7 @@ const Feedback = Object.freeze({
 	// rich presence
 	NO_DYNAMIC_RP: { severity: FeedbackSeverity.WARN, desc: "Dynamic rich presence is required for all sets.",
 		ref: ['https://docs.retroachievements.org/developer-docs/rich-presence.html#introduction',], },
-	NO_CONDITIONAL_DISPLAY: { severity: FeedbackSeverity.INFO, desc: "Good rich presence usually requires conditional displays.",
+	NO_CONDITIONAL_DISPLAY: { severity: FeedbackSeverity.INFO, desc: "The use of conditional displays can improve the quality of rich presence and make it look more polished.",
 		ref: ['https://docs.retroachievements.org/developer-docs/rich-presence.html#conditional-display-strings',], },
 	MISSING_NOTE_RP: { severity: FeedbackSeverity.WARN, desc: "All addresses used in rich presence require a code note.",
 		ref: [], },
@@ -286,6 +286,12 @@ function assess_logic(logic)
 			res.add(new Issue(Feedback.MISSING_NOTE, x.req, 
 				[`Address <code>0x${x.addr.padStart(8, '0')}</code> missing note`]));
 	}
+	
+	function is_acc_value(x, acc)
+	{
+		const z = new Set([x.lhs.type, x.rhs.type]);
+		return z.has(acc) && (z.has(ReqType.VALUE) || z.has(ReqType.FLOAT));
+	}
 
 	if (!logic.value)
 	{
@@ -302,11 +308,6 @@ function assess_logic(logic)
 							res.add(new Issue(Feedback.BAD_PRIOR, a,
 								["A memory value will always be not-equal to its prior, unless the value was has never changed."]));
 
-				function is_acc_value(x, acc)
-				{
-					const z = new Set([x.lhs.type, x.rhs.type]);
-					return z.has(acc) && (z.has(ReqType.VALUE) || z.has(ReqType.FLOAT));
-				}
 				for (const [ai, a] of g.entries())
 				{
 					if (EQ_OPS.includes(a.op) && is_acc_value(a, ReqType.PRIOR))
@@ -354,8 +355,10 @@ function assess_logic(logic)
 	if (!logic.value && res.stats.oca) res.add(new Issue(Feedback.ONE_CONDITION, null));
 
 	// check for Mem>Del Counter
-	res.stats.mem_del = flat.filter(x => x.hits > 0 && x.isCmp() && x.op != '=' && x.lhs.value == x.rhs.value &&
-		[x.lhs.type, x.rhs.type].includes(ReqType.MEM) && [x.lhs.type, x.rhs.type].includes(ReqType.DELTA)).length;
+	res.stats.mem_del = flat.filter(x => x.hits > 0 && x.isComparisonOperator() && x.op != '=' 
+		&& x.rhs && x.lhs.value == x.rhs.value
+		&& [x.lhs.type, x.rhs.type].includes(ReqType.MEM) 
+		&& [x.lhs.type, x.rhs.type].includes(ReqType.DELTA)).length;
 
 	let groups_with_reset = new Set();
 	for (const [gi, g] of logic.groups.entries())
