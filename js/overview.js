@@ -1066,7 +1066,7 @@ function rebuild_sidebar()
 
 	if (current.notes.length > 0)
 	{
-		let row = add_asset_row(SEVERITY_TO_CLASS[current.assessment.set.status()], "📝 Code Notes");
+		let row = add_asset_row(SEVERITY_TO_CLASS[current.assessment.notes.status()], "📝 Code Notes");
 		row.onclick = function(){ show_code_notes(row); };
 		if (!post_load) post_load = row.onclick;
 		assetList.push(row);
@@ -1074,7 +1074,7 @@ function rebuild_sidebar()
 
 	if (current.rp)
 	{
-		let row = add_asset_row(SEVERITY_TO_CLASS[current.assessment.set.status()], "🎮 Rich Presence");
+		let row = add_asset_row(SEVERITY_TO_CLASS[current.assessment.rp.status()], "🎮 Rich Presence");
 		row.onclick = function(){ show_rich_presence(row); };
 		if (!post_load) post_load = row.onclick;
 		assetList.push(row);
