@@ -286,12 +286,18 @@ function assess_logic(logic)
 			res.add(new Issue(Feedback.MISSING_NOTE, x.req, 
 				[`Address <code>0x${x.addr.padStart(8, '0')}</code> missing note`]));
 	}
-	
+
 	function is_acc_value(x, acc)
 	{
 		const z = new Set([x.lhs.type, x.rhs.type]);
 		return z.has(acc) && (z.has(ReqType.VALUE) || z.has(ReqType.FLOAT));
 	}
+
+	// check for Mem>Del Counter
+	res.stats.mem_del = flat.filter(x => x.hits > 0 && x.isComparisonOperator() && x.op != '=' 
+		&& x.rhs && x.lhs.value == x.rhs.value
+		&& [x.lhs.type, x.rhs.type].includes(ReqType.MEM) 
+		&& [x.lhs.type, x.rhs.type].includes(ReqType.DELTA)).length;
 
 	if (!logic.value)
 	{
@@ -353,12 +359,6 @@ function assess_logic(logic)
 	// TODO: there should be a better way to determine this
 	res.stats.oca = res.stats.virtual_addresses.size <= 1 || comparisons.length <= 1;
 	if (!logic.value && res.stats.oca) res.add(new Issue(Feedback.ONE_CONDITION, null));
-
-	// check for Mem>Del Counter
-	res.stats.mem_del = flat.filter(x => x.hits > 0 && x.isComparisonOperator() && x.op != '=' 
-		&& x.rhs && x.lhs.value == x.rhs.value
-		&& [x.lhs.type, x.rhs.type].includes(ReqType.MEM) 
-		&& [x.lhs.type, x.rhs.type].includes(ReqType.DELTA)).length;
 
 	let groups_with_reset = new Set();
 	for (const [gi, g] of logic.groups.entries())

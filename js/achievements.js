@@ -77,7 +77,7 @@ class Achievement
 	}
 }
 
-FAST_WORDS = ["fast", "quick", "speed", "rush", "hurry"]
+FAST_WORDS = ["fast", "quick", "speed", "rush", "hurry", "rapid"];
 class Leaderboard
 {
 	id = -1;
@@ -128,9 +128,13 @@ class Leaderboard
 		return lb;
 	}
 
-	isTime() { return this.format.category == "time" || FAST_WORDS.some(x => this.desc.toLowerCase().includes(x) || this.title.toLowerCase().includes(x)); }
+	#usesFastWords()
+	{ return FAST_WORDS.some(x => this.desc.toLowerCase().includes(x) || this.title.toLowerCase().includes(x)); }
+
+	isTime() { return this.format.category == "time" || this.#usesFastWords(); }
 	getType()
 	{
+		if (this.#usesFastWords()) return "speedrun";
 		if (this.isTime()) return this.lower_is_better ? "speedrun" : "survival";
 		return this.lower_is_better ? "min score" : "high score";
 	}

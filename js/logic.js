@@ -299,7 +299,7 @@ class Logic
 		let logic = new Logic();
 		try
 		{
-			logic.value = value == null ? def.contains('$') : !!value;
+			logic.value = value == null ? def.includes('$') : !!value;
 			for (const [i, g] of def.split(logic.value ? "$" : /(?<!0x)S/).entries())
 			{
 				let group = [];
