@@ -203,7 +203,7 @@ function make_logic_table(logic, assessment = [])
 				reqdata[6] = req.rhs.type.name;
 				if (req.rhs.size) reqdata[7] = req.rhs.size.name;
 				reqdata[8] = req.rhs.type.addr ? ('0x' + req.rhs.value.padStart(8, '0')) : req.rhs.value;
-				if (!req.flag || req.flag.hits) reqdata[9] = "(" + req.hits + ")";
+				if (!req.flag || !req.flag.scalable) reqdata[9] = "(" + req.hits + ")";
 			}
 
 			for (const [vi, v] of reqdata.entries())

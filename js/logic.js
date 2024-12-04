@@ -12,21 +12,21 @@ const ReqType = Object.freeze({
 });
 
 const ReqFlag = Object.freeze({
-	PAUSEIF:     { name: "PauseIf",      prefix: "P:", chain: false, hits: true,  },
-	RESETIF:     { name: "ResetIf",      prefix: "R:", chain: false, hits: true,  },
-	RESETNEXTIF: { name: "ResetNextIf",  prefix: "Z:", chain: true,  hits: true,  },
-	ADDSOURCE:   { name: "AddSource",    prefix: "A:", chain: true,  hits: false, },
-	SUBSOURCE:   { name: "SubSource",    prefix: "B:", chain: true,  hits: false, },
-	ADDHITS:     { name: "AddHits",      prefix: "C:", chain: true,  hits: true,  },
-	SUBHITS:     { name: "SubHits",      prefix: "D:", chain: true,  hits: true,  },
-	ADDADDRESS:  { name: "AddAddress",   prefix: "I:", chain: true,  hits: false, },
-	ANDNEXT:     { name: "AndNext",      prefix: "N:", chain: true,  hits: true,  },
-	ORNEXT:      { name: "OrNext",       prefix: "O:", chain: true,  hits: true,  },
-	MEASURED:    { name: "Measured",     prefix: "M:", chain: false, hits: true,  },
-	MEASUREDP:   { name: "Measured%",    prefix: "G:", chain: false, hits: true,  },
-	MEASUREDIF:  { name: "MeasuredIf",   prefix: "Q:", chain: false, hits: true,  },
-	TRIGGER:     { name: "Trigger",      prefix: "T:", chain: false, hits: true,  },
-	REMEMBER:    { name: "Remember",     prefix: "K:", chain: false, hits: true,  },
+	PAUSEIF:     { name: "PauseIf",      prefix: "P:", chain: false, scalable: false, },
+	RESETIF:     { name: "ResetIf",      prefix: "R:", chain: false, scalable: false, },
+	RESETNEXTIF: { name: "ResetNextIf",  prefix: "Z:", chain: true,  scalable: false, },
+	ADDSOURCE:   { name: "AddSource",    prefix: "A:", chain: true,  scalable: true , },
+	SUBSOURCE:   { name: "SubSource",    prefix: "B:", chain: true,  scalable: true , },
+	ADDHITS:     { name: "AddHits",      prefix: "C:", chain: true,  scalable: false, },
+	SUBHITS:     { name: "SubHits",      prefix: "D:", chain: true,  scalable: false, },
+	ADDADDRESS:  { name: "AddAddress",   prefix: "I:", chain: true,  scalable: true , },
+	ANDNEXT:     { name: "AndNext",      prefix: "N:", chain: true,  scalable: false, },
+	ORNEXT:      { name: "OrNext",       prefix: "O:", chain: true,  scalable: false, },
+	MEASURED:    { name: "Measured",     prefix: "M:", chain: false, scalable: false, },
+	MEASUREDP:   { name: "Measured%",    prefix: "G:", chain: false, scalable: false, },
+	MEASUREDIF:  { name: "MeasuredIf",   prefix: "Q:", chain: false, scalable: false, },
+	TRIGGER:     { name: "Trigger",      prefix: "T:", chain: false, scalable: false, },
+	REMEMBER:    { name: "Remember",     prefix: "K:", chain: false, scalable: true , },
 });
 
 const MemSize = Object.freeze({
@@ -223,12 +223,6 @@ class Requirement
 
 	}
 
-	isCmp()
-	{
-		if (!this.rhs) return false;
-		return new Set(['=', '!=', '>', '>=', '<', '<=']).has(this.op);
-	}
-
 	clone()
 	{
 		let o = new Requirement();
@@ -249,6 +243,9 @@ class Requirement
 			&& !ReqOperand.equals(this.lhs, this.rhs); // values cant be equal
 	}
 
+	isComparisonOperator() { return ['=', '!=', '>', '>=', '<', '<='].includes(this.op); }
+	isModifyingOperator() { return this.op && !this.isComparisonOperator(); }
+
 	static fromString(def)
 	{
 		let req = new Requirement();
@@ -261,7 +258,9 @@ class Requirement
 			if (match[3])
 			{
 				req.op = match[3];
-				req.rhs = ReqOperand.fromString(match[4]);
+				if (req.flag && req.flag.scalable && req.isComparisonOperator())
+					req.op = null;
+				else req.rhs = ReqOperand.fromString(match[4]);
 			}
 
 			if (match[5]) req.hits = +match[5];
@@ -279,7 +278,7 @@ class Requirement
 		{
 			res += this.op.padEnd(4, " ");
 			res += this.rhs.toMarkdown(wReqType, wMemSize, wValue);
-			if (!this.flag || this.flag.hits) res += "(" + this.hits + ")";
+			if (!this.flag || !this.flag.scalable) res += "(" + this.hits + ")";
 		}
 		return res;
 	}
