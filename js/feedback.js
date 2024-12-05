@@ -110,7 +110,7 @@ const Feedback = Object.freeze({
 		ref: ['https://docs.retroachievements.org/developer-docs/prior-values.html',], },
 	COMMON_ALT: { severity: FeedbackSeverity.INFO, desc: "If every alt group contains the same bit of logic in common, it can be refactored back into the Core group.",
 		ref: [], },
-	STALE_ADDADDRESS: { severity: FeedbackSeverity.WARN, desc: "AddAddress should only ever use Mem. Stale references with AddAddress can be dangerous.",
+	STALE_ADDADDRESS: { severity: FeedbackSeverity.WARN, desc: "AddAddress should only ever read from the current frame. Stale references with AddAddress can be dangerous.",
 		ref: ['https://docs.retroachievements.org/developer-docs/hit-counts.html',], },
 	PAUSELOCK_NO_RESET: { severity: FeedbackSeverity.WARN, desc: "PauseLocks require a reset, either via ResetNextIf, or a ResetIf in another group.",
 		ref: ['https://docs.retroachievements.org/developer-docs/flags/pauseif.html#pauseif-with-hit-counts',], },
@@ -124,7 +124,7 @@ const Feedback = Object.freeze({
 		ref: ['https://docs.retroachievements.org/developer-docs/flags/resetnextif.html',], },
 	UUO_PAUSE: { severity: FeedbackSeverity.WARN, desc: "PauseIf should only be used with requirements that have hitcounts.",
 		ref: ['https://docs.retroachievements.org/developer-docs/flags/pauseif.html',], },
-	PAUSING_MEASURED: { severity: FeedbackSeverity.INFO, desc: "PauseIf should only be used with requirements that have hitcounts, unless being used to freeze updates to a Measured requirement.",
+	PAUSING_MEASURED: { severity: FeedbackSeverity.PASS, desc: "PauseIf should only be used with requirements that have hitcounts, unless being used to freeze updates to a Measured requirement.",
 		ref: ['https://docs.retroachievements.org/developer-docs/flags/measured.html#measured',], },
 	RESET_HITCOUNT_1: { severity: FeedbackSeverity.WARN, desc: "A ResetIf or ResetNextIf with a hitcount of 1 does not require a hitcount. The hitcount can be safely removed.",
 		ref: ['https://docs.retroachievements.org/developer-docs/flags/resetif.html',], },
@@ -133,7 +133,7 @@ const Feedback = Object.freeze({
 			'https://docs.retroachievements.org/developer-docs/flags/addsource.html',
 			'https://docs.retroachievements.org/developer-docs/flags/subsource.html',
 		], },
-	UNSATISFIABLE: { severity: FeedbackSeverity.ERROR, desc: "Requirement can never be satisfied. If this is intentional, writing it explicitly is preferred (Val 0 = Val 1, for instance).",
+	UNSATISFIABLE: { severity: FeedbackSeverity.ERROR, desc: "Requirement can never be satisfied. If this is intentional, writing it explicitly is preferred (<code>Val 0 = Val 1</code>, for instance).",
 		ref: [], },
 });
 
@@ -317,17 +317,13 @@ function assess_logic(logic)
 				{
 					if (EQ_OPS.includes(a.op) && is_acc_value(a, ReqType.PRIOR))
 					{
-						const [prior, avalue] = a.lhs.type == ReqType.PRIOR
-							? [a.lhs.type, a.rhs.type]
-							: [a.rhs.type, a.lhs.type];
+						const [prior, avalue] = a.lhs.type == ReqType.PRIOR ? [a.lhs, a.rhs] : [a.rhs, a.lhs];
 						const targetop = FLIP_CMP.get(a.op);
 						for (const [bi, b] of g.entries()) if (ai != bi)
 						{
 							if (b.op == targetop && is_acc_value(b, ReqType.MEM))
 							{
-								const [mem, bvalue] = b.lhs.type == ReqType.MEM
-									? [b.lhs.type, b.rhs.type]
-									: [b.rhs.type, b.lhs.type];
+								const [mem, bvalue] = b.lhs.type == ReqType.MEM ? [b.lhs, b.rhs] : [b.rhs, b.lhs];
 								if (ReqOperand.equals(avalue, bvalue) && ReqOperand.sameValue(mem, prior))
 									res.add(new Issue(Feedback.BAD_PRIOR, a,
 										[`The prior comparison will always be true when <code>${b.toAnnotatedString()}</code>, unless the value was has never changed.`]));
@@ -350,7 +346,7 @@ function assess_logic(logic)
 		for (const [ri, req] of g.entries())
 		{
 			// using AddAddress with Delta/Prior is dangerous
-			if (req.flag == ReqFlag.ADDADDRESS && [ReqType.DELTA, ReqType.PRIOR].includes(req.type))
+			if (req.flag == ReqFlag.ADDADDRESS && [ReqType.DELTA, ReqType.PRIOR].includes(req.lhs.type))
 				res.add(new Issue(Feedback.STALE_ADDADDRESS, req));
 		}
 
