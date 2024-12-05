@@ -178,9 +178,8 @@ function* missing_notes(logic)
 	function _is_missing(operand)
 	{
 		if (!operand || !operand.type.addr) return false;
-		let addr = parseInt(operand.value, 16);
 		for (const cn of current.notes || [])
-			if (cn.contains(addr)) return false;
+			if (cn.contains(operand.value)) return false;
 		return true;
 	}
 	
