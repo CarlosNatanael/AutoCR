@@ -118,6 +118,8 @@ const Feedback = Object.freeze({
 		ref: ['https://docs.retroachievements.org/developer-docs/hit-counts.html',], },
 	USELESS_ANDNEXT: { severity: FeedbackSeverity.WARN, desc: "Combining requirements with AND is the default behavior. Useless AndNext flags should be removed.",
 		ref: ['https://docs.retroachievements.org/developer-docs/flags/andnext-ornext.html',], },
+	USELESS_ALT: { severity: FeedbackSeverity.ERROR, desc: "A Reset-only Alt group is considered satisfied, making all other Alt groups useless.",
+		ref: [], },
 	UUO_RESET: { severity: FeedbackSeverity.WARN, desc: "ResetIf should only be used with achievements that have hitcounts.",
 		ref: ['https://docs.retroachievements.org/developer-docs/flags/resetif.html',], },
 	UUO_RNI: { severity: FeedbackSeverity.WARN, desc: "ResetNextIf should only be used with requirements that have hitcounts.",
@@ -444,10 +446,12 @@ function assess_logic(logic)
 						["Automated recommended change:", `<pre><code>${invert_chain()}</code></pre>`]));
 			}
 			else if (req.flag == ReqFlag.RESETIF && !has_hits)
+			{
 				// ResetIf with a measured should be fine in a value
 				if (!logic.value || group_flags.has(ReqFlag.MEASURED) || group_flags.has(ReqFlag.MEASUREDP))
 					res.add(new Issue(Feedback.UUO_RESET, req,
 						["Automated recommended change:", `<pre><code>${invert_chain()}</code></pre>`]));
+			}
 			else if (req.flag == ReqFlag.RESETIF && req.hits == 1)
 				res.add(new Issue(Feedback.RESET_HITCOUNT_1, req,
 					["Automated recommended change:", `<pre><code>${invert_chain()}</code></pre>`]));
@@ -462,9 +466,14 @@ function assess_logic(logic)
 					if (COMBINING_MODIFIER_FLAGS.has(g[i].flag)) continue;
 
 					// ResetNextIf with a measured should be fine in a value
-					if (!logic.value || g[i].flag == ReqFlag.MEASURED || g[i].flag == ReqFlag.MEASUREDP)
-						// otherwise, RNI was not valid
-						res.add(new Issue(Feedback.UUO_RNI, req));
+					if (logic.value && [ReqFlag.MEASURED, ReqFlag.MEASUREDP].includes(g[i].flag)) break;
+					
+					// RNI->PauseIf(0) is `Pause Until`
+					// ref: https://docs.retroachievements.org/developer-docs/achievement-templates.html#pause-until-using-pauseif-to-prevent-achievement-processing-until-some-condition-is-met
+					if (g[i].flag == ReqFlag.PAUSEIF) break;
+					
+					// otherwise, RNI was not valid
+					res.add(new Issue(Feedback.UUO_RNI, req));
 					break;
 				}
 			}
