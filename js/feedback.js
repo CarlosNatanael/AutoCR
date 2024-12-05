@@ -470,7 +470,7 @@ function assess_logic(logic)
 					
 					// RNI->PauseIf(0) is `Pause Until`
 					// ref: https://docs.retroachievements.org/developer-docs/achievement-templates.html#pause-until-using-pauseif-to-prevent-achievement-processing-until-some-condition-is-met
-					if (g[i].flag == ReqFlag.PAUSEIF) break;
+					if (req.hits > 0 && g[i].flag == ReqFlag.PAUSEIF) break;
 					
 					// otherwise, RNI was not valid
 					res.add(new Issue(Feedback.UUO_RNI, req));
