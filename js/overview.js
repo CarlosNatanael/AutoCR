@@ -489,7 +489,7 @@ function show_leaderboard(lb, row)
 	for (const block of ["START", "CANCEL", "SUBMIT", "VALUE"])
 	{
 		logicdiv.appendChild(document.createElement('h3')).appendChild(document.createTextNode(block));
-		logicdiv.appendChild(make_logic_table(lb.components[block.substring(0, 3)]));
+		logicdiv.appendChild(make_logic_table(lb.components[block.substring(0, 3)], feedback.issues));
 	}
 	elts.push(logicdiv);
 
