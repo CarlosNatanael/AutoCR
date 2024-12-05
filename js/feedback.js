@@ -284,7 +284,7 @@ function assess_logic(logic)
 	{
 		for (const x of missing_notes(logic))
 			res.add(new Issue(Feedback.MISSING_NOTE, x.req, 
-				[`Address <code>0x${x.addr.padStart(8, '0')}</code> missing note`]));
+				[`Address <code>0x${x.addr.toString(16).padStart(8, '0')}</code> missing note`]));
 	}
 
 	function is_acc_value(x, acc)
@@ -649,11 +649,11 @@ function assess_rich_presence()
 			if (d.condition != null)
 				for (const x of missing_notes(d.condition))
 					res.add(new Issue(Feedback.MISSING_NOTE_RP, null,
-						[`Missing note for condition of display #${di+1}: <code>0x${x.addr.padStart(8, '0')}</code>`]));
+						[`Missing note for condition of display #${di+1}: <code>0x${x.addr.toString(16).padStart(8, '0')}</code>`]));
 			for (const [li, look] of d.lookups.entries())
 				for (const x of missing_notes(look.calc))
 					res.add(new Issue(Feedback.MISSING_NOTE_RP, null,
-						[`Missing note for ${look.name} lookup of display #${di+1}: <code>0x${x.addr.padStart(8, '0')}</code>`]));
+						[`Missing note for ${look.name} lookup of display #${di+1}: <code>0x${x.addr.toString(16).padStart(8, '0')}</code>`]));
 		}
 
 	return res;
