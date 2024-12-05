@@ -646,7 +646,7 @@ class RichPresence
 
 		// process all lookups in each display
 		for (let d of richp.display)
-			d.lookups = [...d.string.matchAll(/@([_a-z][_a-z0-9]*)\((.+?)\)/gi).map((x) => ({
+			d.lookups = [...d.string.matchAll(/@([ _a-z][ _a-z0-9]*)\((.+?)\)/gi).map((x) => ({
 				name: x[1],
 				calc: Logic.fromString(x[2], true),
 			}))];

@@ -907,7 +907,7 @@ function show_rich_presence(sidebar)
 	elts.push(rpdiv);
 
 	function addLookups(t)
-	{ return t.replaceAll(/(@([_a-z][_a-z0-9]*)\((.+?)\))/gi, '<span class="lookup">@<span class="link">$2</span>(<span class="value logic">$3</span>)</span>'); }
+	{ return t.replaceAll(/(@([ _a-z][ _a-z0-9]*)\((.+?)\))/gi, '<span class="lookup">@<span class="link">$2</span>(<span class="value logic">$3</span>)</span>'); }
 
 	let display = false;
 	rptext = current.rp.text.split(/\r\n|(?!\r\n)[\n-\r\x85\u2028\u2029]/g).map(line => {
@@ -918,7 +918,7 @@ function show_rich_presence(sidebar)
 		if (line.startsWith('Display:')) display = true;
 		return line;
 	}).join('\n');
-	rptext = rptext.replaceAll(/((Lookup|Format|Display):(\S*))/g, '<span class="header" id="def-$3">$1</span>');
+	rptext = rptext.replaceAll(/((Lookup|Format|Display):(.+))/g, '<span class="header" id="def-$3">$1</span>');
 
 	rpdiv.appendChild(document.createElement('pre'))
 		.appendChild(document.createElement('code'))
