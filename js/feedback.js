@@ -135,7 +135,9 @@ const Feedback = Object.freeze({
 			'https://docs.retroachievements.org/developer-docs/flags/addsource.html',
 			'https://docs.retroachievements.org/developer-docs/flags/subsource.html',
 		], },
-	UNSATISFIABLE: { severity: FeedbackSeverity.ERROR, desc: "Requirement can never be satisfied. If this is intentional, writing it explicitly is preferred (<code>Val 0 = Val 1</code>, for instance).",
+	UNSATISFIABLE: { severity: FeedbackSeverity.ERROR, desc: "Requirement can never be satisfied (always-false). If this is intentional, writing it explicitly is preferred (<code>Val 0 = Val 1</code>, for instance).",
+		ref: [], },
+	UNNECESSARY: { severity: FeedbackSeverity.INFO, desc: "Requirement will always be satisfied (always-true). If this is intentional, writing it explicitly is preferred (<code>Val 0 = Val 0</code>, for instance).",
 		ref: [], },
 });
 
