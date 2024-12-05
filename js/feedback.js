@@ -330,7 +330,7 @@ function assess_logic(logic)
 									: [b.rhs.type, b.lhs.type];
 								if (ReqOperand.equals(avalue, bvalue) && ReqOperand.sameValue(mem, prior))
 									res.add(new Issue(Feedback.BAD_PRIOR, a,
-										[`The prior comparison will always be true when <code>${b.toMarkdown()}</code>, unless the value was has never changed.`]));
+										[`The prior comparison will always be true when <code>${b.toAnnotatedString()}</code>, unless the value was has never changed.`]));
 							}
 						}
 					}

@@ -200,6 +200,7 @@ class ReqOperand
 
 	toValueString() { return this.type && this.type.addr ? ('0x' + this.value.toString(16).padStart(8, '0')) : this.value.toString(); }
 	toString() { return this.type == ReqType.RECALL ? this.type.prefix : this.toValueString(); }
+	toAnnotatedString() { return (this.type.addr ? `${this.type.name} ` : "") + this.toString(); }
 
 	toMarkdown(wReqType = ReqTypeWidth, wMemSize = MemSizeWidth, wValue = ValueWidth)
 	{
@@ -207,7 +208,7 @@ class ReqOperand
 		let size = this.size ? this.size.name : "";
 		return this.type.name.padEnd(wReqType + 1, " ") +
 			size.padEnd(wMemSize + 1, " ") +
-			((this.type.addr ? "0x" : "") + value).padEnd(wValue + 1);
+			this.toValueString().padEnd(wValue + 1);
 	}
 	toObject() { return {...this}; }
 }
@@ -274,6 +275,7 @@ class Requirement
 		return req;
 	}
 
+	toAnnotatedString() { return this.lhs.toAnnotatedString() + (this.op ? ` ${this.op} ${this.rhs.toAnnotatedString()}` : "") }
 	toMarkdown(wReqType, wMemSize, wValue)
 	{
 		let flag = this.flag ? this.flag.name : "";
