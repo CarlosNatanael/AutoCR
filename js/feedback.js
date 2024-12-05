@@ -315,7 +315,7 @@ function assess_logic(logic)
 					if (ReqOperand.sameValue(a.lhs, a.rhs) && a.op == '!=')
 						if (new Set([ReqType.MEM, ReqType.PRIOR]).difference(new Set([a.lhs.type, a.rhs.type])).size == 0)
 							res.add(new Issue(Feedback.BAD_PRIOR, a,
-								["A memory value will always be not-equal to its prior, unless the value was has never changed."]));
+								["A memory value will always be not-equal to its prior, unless the value has never changed."]));
 
 				for (const [ai, a] of g.entries())
 				{
@@ -330,7 +330,7 @@ function assess_logic(logic)
 								const [mem, bvalue] = b.lhs.type == ReqType.MEM ? [b.lhs, b.rhs] : [b.rhs, b.lhs];
 								if (ReqOperand.equals(avalue, bvalue) && ReqOperand.sameValue(mem, prior))
 									res.add(new Issue(Feedback.BAD_PRIOR, a,
-										[`The prior comparison will always be true when <code>${b.toAnnotatedString()}</code>, unless the value was has never changed.`]));
+										[`The prior comparison will always be true when <code>${b.toAnnotatedString()}</code>, unless the value has never changed.`]));
 							}
 						}
 					}
