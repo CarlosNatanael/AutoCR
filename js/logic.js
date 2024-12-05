@@ -65,6 +65,7 @@ const FormatType = Object.freeze({
 	FRAMES:        { name: "Frames", type: "FRAMES", category: "time", },
 	TIME:          { name: "Frames", type: "TIME", category: "time", },
 	MILLISECS:     { name: "Centiseconds", type: "MILLISECS", category: "time", },
+	TIMESECS:      { name: "Seconds", type: "TIMESECS", category: "time", },
 	SECS:          { name: "Seconds", type: "SECS", category: "time", },
 	MINUTES:       { name: "Minutes", type: "MINUTES", category: "time", },
 	SECS_AS_MINS:  { name: "Seconds", type: "SECS_AS_MINS", category: "time", },
