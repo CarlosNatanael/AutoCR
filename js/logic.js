@@ -139,12 +139,14 @@ class ReqOperand
 		try
 		{
 			let match = def.match(OPERAND_RE);
+			// address for memory read
 			if (match[1])
 				return new ReqOperand(
-					match[4].trim(), 
+					parseInt(match[4].trim(), 16), 
 					ReqTypeMap[match[2].trim()], 
 					MemSizeMap[match[3].trim()]
 				);
+			// value in decimal/float
 			else if (match[5])
 			{
 				// force Value type if no prefix
@@ -157,12 +159,14 @@ class ReqOperand
 					null
 				);
 			}
+			// value in hex with size info
 			else if (match[8])
 				return new ReqOperand(
 					parseInt(match[9], 16), 
 					ReqType.VALUE, 
 					null
 				);
+			// recall
 			else if (match[10])
 				return new ReqOperand('', ReqType.RECALL, null);
 		}
@@ -193,7 +197,7 @@ class ReqOperand
 		return this.size.maxvalue;
 	}
 
-	toValueString() { return this.type && this.type.addr ? ('0x' + this.value.toString(16)) : this.value.toString(); }
+	toValueString() { return this.type && this.type.addr ? ('0x' + this.value.toString(16).padStart(8, '0')) : this.value.toString(); }
 	toString() { return this.type == ReqType.RECALL ? this.type.prefix : this.toValueString(); }
 
 	toMarkdown(wReqType = ReqTypeWidth, wMemSize = MemSizeWidth, wValue = ValueWidth)

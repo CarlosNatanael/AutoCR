@@ -211,6 +211,12 @@ img.icon
 	background-color: #FFFF99;
 }
 
+/* toggling hex view in logic table */
+.logic-table.show-hex .in-hex { display: inline; }
+.logic-table:not(.show-hex) .in-hex { display: none; }
+.logic-table.show-hex .in-dec { display: none; }
+.logic-table:not(.show-hex) .in-dec { display: inline; }
+
 #info-container .data-table table tbody tr.warn td:first-child
 {
 	background-repeat: no-repeat;

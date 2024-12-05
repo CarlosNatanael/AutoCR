@@ -149,8 +149,11 @@ async function copyToClipboard(text)
 
 function make_logic_table(logic, assessment = [])
 {
-	let logictbl = document.createElement('table');
-	let logicbody = document.createElement('tbody');
+	let logicdiv = document.createElement('div');
+	logicdiv.classList.add('logic-table');
+
+	let logictbl = logicdiv.appendChild(document.createElement('table'));
+	let logicbody = logictbl.appendChild(document.createElement('tbody'));
 
 	let grouplabel = (i) => i == 0 ? "Core Group" : `Alt Group ${i}`
 	if (logic.value) grouplabel = (i) => `Value Group ${i+1}`;
@@ -181,7 +184,7 @@ function make_logic_table(logic, assessment = [])
 
 		for (const [ri, req] of g.entries())
 		{
-			let reqrow = document.createElement('tr');
+			let reqrow = logicbody.appendChild(document.createElement('tr'));
 			
 			let ref_list = [];
 			for (const [ii, issue] of assessment.entries())
@@ -196,42 +199,68 @@ function make_logic_table(logic, assessment = [])
 			if (req.flag) reqdata[1] = req.flag.name;
 			reqdata[2] = req.lhs.type.name;
 			if (req.lhs.size) reqdata[3] = req.lhs.size.name;
-			reqdata[4] = req.lhs.type.addr ? ('0x' + req.lhs.value.padStart(8, '0')) : req.lhs.value;
+			reqdata[4] = req.lhs;
 			if (req.op && req.rhs)
 			{
 				reqdata[5] = req.op;
 				reqdata[6] = req.rhs.type.name;
 				if (req.rhs.size) reqdata[7] = req.rhs.size.name;
-				reqdata[8] = req.rhs.type.addr ? ('0x' + req.rhs.value.padStart(8, '0')) : req.rhs.value;
+				reqdata[8] = req.rhs;
 				if (!req.flag || !req.flag.scalable) reqdata[9] = "(" + req.hits + ")";
 			}
 
 			for (const [vi, v] of reqdata.entries())
 			{
-				let td = document.createElement('td');
+				let td = reqrow.appendChild(document.createElement('td'));
 				let span = td.appendChild(document.createElement('span'));
 				span.innerHTML = v;
-				if (typeof v === 'string' && v.startsWith('0x'))
+
+				if (v instanceof ReqOperand)
 				{
-					let note = get_note(v);
-					if (note)
+					if (v.type.addr)
 					{
-						span.classList.add('tooltip');
-						let tooltip = span.appendChild(document.createElement('span'));
-						tooltip.classList.add('tooltip-info');
-						let pre = tooltip.appendChild(document.createElement('pre'));
-						pre.appendChild(document.createTextNode(note));
+						let note = get_note(v.value);
+						if (note)
+						{
+							span.classList.add('tooltip');
+							let tooltip = span.appendChild(document.createElement('span'));
+							tooltip.classList.add('tooltip-info');
+							let pre = tooltip.appendChild(document.createElement('pre'));
+							pre.appendChild(document.createTextNode(note));
+						}
+					}
+					else if (Number.isInteger(v.value))
+					{
+						let asDec, asHex;
+						
+						asDec = document.createElement('span');
+						asDec.classList.add('in-dec');
+						asDec.innerText = v.value.toString();
+
+						asHex = document.createElement('span');
+						asHex.classList.add('in-hex');
+						asHex.innerText = '0x' + v.value.toString(16).padStart(8, '0');
+
+						td.replaceChildren(asDec, asHex);
 					}
 				}
 				if (vi == reqdata.length - 1 && v == '(0)')
 					span.classList.add('vfade');
-				reqrow.appendChild(td);
 			}
-			logicbody.appendChild(reqrow);
 		}
 	}
-	logictbl.appendChild(logicbody);
-	return logictbl;
+
+	let toggleBtn = logicdiv.appendChild(document.createElement('button'));
+	toggleBtn.classList.add('float-right');
+	toggleBtn.innerText = 'Toggle Hex Values';
+	toggleBtn.onclick = function(){ logicdiv.classList.toggle('show-hex'); }
+
+	let markdownBtn = logicdiv.appendChild(document.createElement('button'));
+	markdownBtn.classList.add('float-right');
+	markdownBtn.appendChild(document.createTextNode('Copy Markdown'));
+	markdownBtn.onclick = () => copyToClipboard(logic.toMarkdown());
+
+	return logicdiv;
 }
 
 function make_issue_list_entry(ii, issue)
@@ -358,12 +387,6 @@ function show_achievement(ach, row)
 	logicdiv.classList.add('data-table');
 	logicdiv.appendChild(make_logic_table(ach.logic, feedback.issues));
 	elts.push(logicdiv);
-	
-	let btndiv = logicdiv.appendChild(document.createElement('div'));
-	btndiv.classList.add('float-right');
-	let btn = btndiv.appendChild(document.createElement('button'));
-	btn.appendChild(document.createTextNode('Copy Markdown'));
-	btn.onclick = () => copyToClipboard(ach.logic.toMarkdown());
 	
 	let statsdiv = document.createElement('div');
 	statsdiv.classList.add('stats');
