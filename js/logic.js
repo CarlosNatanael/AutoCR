@@ -333,7 +333,7 @@ class Logic
 
 	getTypes()     { return this.getOperands().map(x => x.type).filter(x => x); }
 	getMemSizes()  { return this.getOperands().map(x => x.size).filter(x => x); }
-	getAddresses() { return this.getOperands().filter(x => x.type && x.type.addr).map(x => parseInt(x.value, 16)); }
+	getAddresses() { return this.getOperands().filter(x => x.type && x.type.addr).map(x => x.value); }
 	getFlags()     { return this.groups.reduce((ia, ie) => ia.concat(ie.map(x => x.flag)), []).filter(x => x); }
 
 	toMarkdown()

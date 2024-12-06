@@ -308,7 +308,6 @@ function assess_logic(logic)
 			res.add(new Issue(Feedback.MISSING_DELTA, null));
 		else (res.stats.deltas == 0) // priors > 0, implicitly
 		{
-			const EQ_OPS = ['=', '!='];
 			for (const [gi, g] of logic.groups.entries())
 			{
 				for (const [ai, a] of g.entries())
@@ -319,13 +318,12 @@ function assess_logic(logic)
 
 				for (const [ai, a] of g.entries())
 				{
-					if (EQ_OPS.includes(a.op) && is_acc_value(a, ReqType.PRIOR))
+					if (a.op == '!=' && is_acc_value(a, ReqType.PRIOR))
 					{
 						const [prior, avalue] = a.lhs.type == ReqType.PRIOR ? [a.lhs, a.rhs] : [a.rhs, a.lhs];
-						const targetop = FLIP_CMP.get(a.op);
 						for (const [bi, b] of g.entries()) if (ai != bi)
 						{
-							if (b.op == targetop && is_acc_value(b, ReqType.MEM))
+							if (b.op == '=' && is_acc_value(b, ReqType.MEM))
 							{
 								const [mem, bvalue] = b.lhs.type == ReqType.MEM ? [b.lhs, b.rhs] : [b.rhs, b.lhs];
 								if (ReqOperand.equals(avalue, bvalue) && ReqOperand.sameValue(mem, prior))
