@@ -608,7 +608,7 @@ function assess_code_notes(notes)
 			res.add(new Issue(Feedback.NOTE_NO_SIZE, note));
 		else
 		{
-			let type = note.type ? note.type.name : 'Other';
+			let type = note.type ? note.type.name : 'Unknown';
 			res.stats.size_counts.set(type, 1 + (res.stats.size_counts.get(type) || 0));
 		}
 
