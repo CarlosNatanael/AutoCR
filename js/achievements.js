@@ -627,7 +627,7 @@ class RichPresence
 			else if (obj && obj.type == 'macro')
 			{
 				if (line.startsWith('FormatType'))
-					obj.param = FormatTypeMap[line.substring(11)];
+					obj.param = FormatTypeMap[line.substring(11).toUpperCase()];
 			}
 			else if (obj && obj.type == 'lookup')
 			{
