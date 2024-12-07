@@ -7,7 +7,6 @@ function reset_loaded()
 	current.rp = null;
 	current.assessment = { pass: true, };
 }
-var assetList = [];
 
 function __noop(event)
 {
@@ -1085,7 +1084,7 @@ const SEVERITY_TO_CLASS = ['pass', 'warn', 'fail', 'fail'];
 function rebuild_sidebar()
 {
 	let header;
-	assetList = [];
+	let assetList = [];
 	let post_load = null;
 
 	if (current.set != null || current.local != null)

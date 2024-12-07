@@ -500,8 +500,10 @@ function assess_writing(asset)
 			[`Automated suggestion: <em>${res.corrected_title}</em> &mdash; Additional suggestions: ${links}`]));
 	}
 
+	/*
 	if (asset.title.endsWith('.') && !asset.title.endsWith('..'))
 		res.add(new Issue(Feedback.TITLE_PUNCTUATION, 'title'));
+	*/
 
 	function build_indicated_feedback(text, re)
 	{ return '<em>' + text.replace(re, x => `<span class="warn">${x}</span>`) + '</em>'; }

@@ -311,7 +311,7 @@ class Logic
 			{
 				let group = [];
 				if (g.length > 0) // some sets have empty core groups
-					for (const [j, req] of g.split("_").entries())
+					for (const [j, req] of g.split(/_|(?<!0x) /).entries())
 						group.push(Requirement.fromString(req));
 				logic.groups.push(group);
 			}
