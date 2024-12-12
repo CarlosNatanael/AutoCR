@@ -170,10 +170,10 @@ img.icon
 	color: grey;
 }
 
-#info-container .main-header,
-#info-container .main-header + div
+#info-container .main-header
 {
 	clear: both;
+	border-bottom: 1px solid transparent;
 }
 
 #info-container .main-header + div
@@ -212,10 +212,10 @@ img.icon
 }
 
 /* toggling hex view in logic table */
-.logic-table.show-hex .in-hex { display: inline; }
-.logic-table:not(.show-hex) .in-hex { display: none; }
-.logic-table.show-hex .in-dec { display: none; }
-.logic-table:not(.show-hex) .in-dec { display: inline; }
+.logic-table table.show-hex .in-hex { display: inline; }
+.logic-table table:not(.show-hex) .in-hex { display: none; }
+.logic-table table.show-hex .in-dec { display: none; }
+.logic-table table:not(.show-hex) .in-dec { display: inline; }
 
 #info-container .data-table table tbody tr.warn td:first-child
 {
@@ -258,6 +258,11 @@ img.icon
 #info-container .data-table table .col-hdr
 {
 	background-color: black !important;
+}
+
+.logic-table [data-hits="0"]
+{
+	opacity: 20%;
 }
 
 .code-notes pre,
@@ -366,17 +371,6 @@ pre code
 	display: block;
 }
 
-.float-right
-{
-	float: right;
-}
-
-.fade
-{
-	opacity: 75%;
-}
-
-.vfade
-{
-	opacity: 20%;
-}
+.float-right { float: right; }
+.clear { clear: both; }
+.fade { opacity: 75%; }

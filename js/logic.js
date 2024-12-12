@@ -240,6 +240,8 @@ class Requirement
 		return o;
 	}
 
+	hasHits() { return !this.flag || !this.flag.scalable; }
+
 	isAlwaysTrue() { return this.op == '=' && ReqOperand.equals(this.lhs, this.rhs); }
 	isAlwaysFalse()
 	{ 
@@ -323,17 +325,26 @@ class Logic
 
 	getOperands()
 	{
-		return this.groups.reduce(
-			(ia, ie) => ia.concat(
-				ie.reduce((ja, je) => ja.concat(je.lhs, je.rhs), [])
-			), 
-			[]
-		).filter(x => x);
+		return this.groups.reduce((ia, ie) => ia.concat(
+			ie.reduce((ja, je) => ja.concat(je.lhs, je.rhs), [])
+		), []).filter(x => x);
+	}
+
+	getAddresses()
+	{
+		return this.groups.reduce((ia, ie) => ia.concat(
+			ie.reduce((ja, je, i, a) => {
+				let p = i == 0 ? null : a[i-1].flag;
+				return ja.concat({ opd: je.lhs, pre: p }, { opd: je.rhs, pre: p });
+			}, [])
+		), [])
+			.filter(({ pre }) => pre != ReqFlag.ADDADDRESS) // remove everything following an AddAddress
+			.filter(({ opd }) => opd && opd.type && opd.type.addr) // keep only address reads
+			.map(({ opd }) => opd.value);
 	}
 
 	getTypes()     { return this.getOperands().map(x => x.type).filter(x => x); }
 	getMemSizes()  { return this.getOperands().map(x => x.size).filter(x => x); }
-	getAddresses() { return this.getOperands().filter(x => x.type && x.type.addr).map(x => x.value); }
 	getFlags()     { return this.groups.reduce((ia, ie) => ia.concat(ie.map(x => x.flag)), []).filter(x => x); }
 
 	toMarkdown()

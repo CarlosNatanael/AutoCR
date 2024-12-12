@@ -12,7 +12,7 @@ function tc_minor(word) { return TITLE_CASE_MINORS.has(word); }
 function make_title_case(phrase)
 {
 	function tc(s) { return s.charAt(0).toUpperCase() + s.substring(1); }
-	return phrase.replace(/[\w'\u2019]+/g, function(x, i)
+	return phrase.replace(/['\u2018\u2019\p{Script=Latin}]+/gu, function(x, i)
 	{
 		if (x == x.toUpperCase()) return x; // assume allcaps for a reason
 		if (i == 0 || i + x.length == phrase.length) return tc(x);
@@ -22,11 +22,13 @@ function make_title_case(phrase)
 function titlecase_links(phrase)
 {
 	let q = encodeURIComponent(phrase);
-	return [
-		`https://titlecaseconverter.com/?style=CMOS&showExplanations=1&keepAllCaps=1&multiLine=1&highlightChanges=1&convertOnPaste=1&straightQuotes=1&title=${q}`,
-		`https://capitalizemytitle.com/style/Chicago/?title=${q}`,
-	];
+	return {
+		'titlecaseconverter.com': `https://titlecaseconverter.com/?style=CMOS&showExplanations=1&keepAllCaps=1&multiLine=1&highlightChanges=1&convertOnPaste=1&straightQuotes=1&title=${q}`,
+		'capitalizemytitle.com': `https://capitalizemytitle.com/style/Chicago/?title=${q}`,
+	};
 }
+function toDisplayHex(addr)
+{ return '0x' + addr.toString(16).padStart(8, '0'); }
 
 const FeedbackSeverity = Object.freeze({
 	PASS: 0,
@@ -150,7 +152,7 @@ class Issue
 	{
 		this.type = type;
 		this.target = target;
-		this.detail = detail || [];
+		this.detail = detail;
 	}
 }
 
@@ -175,7 +177,7 @@ class Assessment
 }
 
 function send_message_to(target)
-{ return `<a href="https://retroachievements.org/messages/create?to=${target}">message ${target}</a>`; }
+{ return `https://retroachievements.org/messages/create?to=${target}`; }
 
 function* missing_notes(logic)
 {
@@ -228,7 +230,7 @@ function assess_logic(logic)
 	// set of unique flags, comparisons, and sizes used in the achievement
 	res.stats.unique_flags = new Set(logic.getFlags());
 	res.stats.unique_cmps = new Set(comparisons);
-	res.stats.unique_sizes = new Set(logic.getMemSizes()).difference(BitProficiency);
+	res.stats.unique_sizes = new Set(logic.getMemSizes().map(x => BitProficiency.has(x) ? MemSize.BYTE : x));
 
 	// list of all chained requirements
 	let chains = [];
@@ -286,8 +288,10 @@ function assess_logic(logic)
 	if (current.notes.length)
 	{
 		for (const x of missing_notes(logic))
-			res.add(new Issue(Feedback.MISSING_NOTE, x.req, 
-				[`Address <code>0x${x.addr.toString(16).padStart(8, '0')}</code> missing note`]));
+			res.add(new Issue(Feedback.MISSING_NOTE, x.req,
+				<ul>
+					<li>Address <code>{toDisplayHex(x.addr)}</code> missing note</li>
+				</ul>));
 	}
 
 	function is_acc_value(x, acc)
@@ -314,7 +318,9 @@ function assess_logic(logic)
 					if (ReqOperand.sameValue(a.lhs, a.rhs) && a.op == '!=')
 						if (new Set([ReqType.MEM, ReqType.PRIOR]).difference(new Set([a.lhs.type, a.rhs.type])).size == 0)
 							res.add(new Issue(Feedback.BAD_PRIOR, a,
-								["A memory value will always be not-equal to its prior, unless the value has never changed."]));
+								<ul>
+									<li>A memory value will always be not-equal to its prior, unless the value has never changed.</li>
+								</ul>));
 
 				for (const [ai, a] of g.entries())
 				{
@@ -328,7 +334,9 @@ function assess_logic(logic)
 								const [mem, bvalue] = b.lhs.type == ReqType.MEM ? [b.lhs, b.rhs] : [b.rhs, b.lhs];
 								if (ReqOperand.equals(avalue, bvalue) && ReqOperand.sameValue(mem, prior))
 									res.add(new Issue(Feedback.BAD_PRIOR, a,
-										[`The prior comparison will always be true when <code>${b.toAnnotatedString()}</code>, unless the value has never changed.`]));
+										<ul>
+											<li>The prior comparison will always be true when <code>{b.toAnnotatedString()}</code>, unless the value has never changed.</li>
+										</ul>));
 							}
 						}
 					}
@@ -443,18 +451,27 @@ function assess_logic(logic)
 					res.add(new Issue(Feedback.PAUSING_MEASURED, req));
 				else if (!logic.value)
 					res.add(new Issue(Feedback.UUO_PAUSE, req,
-						["Automated recommended change:", `<pre><code>${invert_chain()}</code></pre>`]));
+						<ul>
+							<li>Automated recommended change:</li>
+							<pre><code>{invert_chain()}</code></pre>
+						</ul>));
 			}
 			else if (req.flag == ReqFlag.RESETIF && !has_hits)
 			{
 				// ResetIf with a measured should be fine in a value
 				if (!logic.value || group_flags.has(ReqFlag.MEASURED) || group_flags.has(ReqFlag.MEASUREDP))
 					res.add(new Issue(Feedback.UUO_RESET, req,
-						["Automated recommended change:", `<pre><code>${invert_chain()}</code></pre>`]));
+						<ul>
+							<li>Automated recommended change:</li>
+							<pre><code>{invert_chain()}</code></pre>
+						</ul>));
 			}
 			else if (req.flag == ReqFlag.RESETIF && req.hits == 1)
 				res.add(new Issue(Feedback.RESET_HITCOUNT_1, req,
-					["Automated recommended change:", `<pre><code>${invert_chain()}</code></pre>`]));
+					<ul>
+						<li>Automated recommended change:</li>
+						<pre><code>{invert_chain()}</code></pre>
+					</ul>));
 			else if (req.flag == ReqFlag.RESETNEXTIF)
 			{
 				for (let i = ri + 1; i < g.length; i++)
@@ -482,10 +499,18 @@ function assess_logic(logic)
 	return res;
 }
 
-const EMOJI_RE = /\p{Emoji_Presentation}/gu;
-const TYPOGRAPHY_PUNCT = /[\u2018\u2019\u201C\u201D]/gu;
-const FOREIGN_RE = /(?:\p{Script=Arabic}|\p{Script=Armenian}|\p{Script=Bengali}|\p{Script=Bopomofo}|\p{Script=Braille}|\p{Script=Buhid}|\p{Script=Canadian_Aboriginal}|\p{Script=Cherokee}|\p{Script=Cyrillic}|\p{Script=Devanagari}|\p{Script=Ethiopic}|\p{Script=Georgian}|\p{Script=Greek}|\p{Script=Gujarati}|\p{Script=Gurmukhi}|\p{Script=Han}|\p{Script=Hangul}|\p{Script=Hanunoo}|\p{Script=Hebrew}|\p{Script=Hiragana}|\p{Script=Inherited}|\p{Script=Kannada}|\p{Script=Katakana}|\p{Script=Khmer}|\p{Script=Lao}|\p{Script=Limbu}|\p{Script=Malayalam}|\p{Script=Mongolian}|\p{Script=Myanmar}|\p{Script=Ogham}|\p{Script=Oriya}|\p{Script=Runic}|\p{Script=Sinhala}|\p{Script=Syriac}|\p{Script=Tagalog}|\p{Script=Tagbanwa}|\p{Script=Tamil}|\p{Script=Telugu}|\p{Script=Thaana}|\p{Script=Thai}|\p{Script=Tibetan}|\p{Script=Yi})+/gu;
-const NON_ASCII_RE = /(?:[^\x00-\x7F])+/g;
+const EMOJI_RE = /(\p{Emoji_Presentation})/gu;
+const TYPOGRAPHY_PUNCT = /([\u2018\u2019\u201C\u201D])/gu;
+const FOREIGN_RE = /(\p{Script=Arabic}|\p{Script=Armenian}|\p{Script=Bengali}|\p{Script=Bopomofo}|\p{Script=Braille}|\p{Script=Buhid}|\p{Script=Canadian_Aboriginal}|\p{Script=Cherokee}|\p{Script=Cyrillic}|\p{Script=Devanagari}|\p{Script=Ethiopic}|\p{Script=Georgian}|\p{Script=Greek}|\p{Script=Gujarati}|\p{Script=Gurmukhi}|\p{Script=Han}|\p{Script=Hangul}|\p{Script=Hanunoo}|\p{Script=Hebrew}|\p{Script=Hiragana}|\p{Script=Inherited}|\p{Script=Kannada}|\p{Script=Katakana}|\p{Script=Khmer}|\p{Script=Lao}|\p{Script=Limbu}|\p{Script=Malayalam}|\p{Script=Mongolian}|\p{Script=Myanmar}|\p{Script=Ogham}|\p{Script=Oriya}|\p{Script=Runic}|\p{Script=Sinhala}|\p{Script=Syriac}|\p{Script=Tagalog}|\p{Script=Tagbanwa}|\p{Script=Tamil}|\p{Script=Telugu}|\p{Script=Thaana}|\p{Script=Thai}|\p{Script=Tibetan}|\p{Script=Yi})+/gu;
+const NON_ASCII_RE = /([^\x00-\x7F]+)/g;
+
+function HighlightedFeedback({text, pattern})
+{
+	let parts = text.split(pattern);
+	for (let i = 1; i < parts.length; i += 2)
+		parts[i] = <span key={i} className="warn">{parts[i]}</span>;
+	return <>{parts}</>;
+}
 
 function assess_writing(asset)
 {
@@ -493,20 +518,19 @@ function assess_writing(asset)
 
 	res.corrected_title = make_title_case(asset.title);
 	if (res.corrected_title != asset.title)
-	{
-		const links = [...titlecase_links(asset.title).entries()].map(
-			([i, url]) => `[<a href="${url}">${i+1}</a>]`).join(' ');
-		res.add(new Issue(Feedback.TITLE_CASE, 'title', 
-			[`Automated suggestion: <em>${res.corrected_title}</em> &mdash; Additional suggestions: ${links}`]));
-	}
+		res.add(new Issue(Feedback.TITLE_CASE, 'title',
+			<ul>
+				<li>Automated suggestion: <em>{res.corrected_title}</em></li>
+				<li>Additional suggestions</li>
+				<ul>
+					{Object.entries(titlecase_links(asset.title)).map(([k, v]) => (<li key={k}><a href={v}>{k}</a></li>))}
+				</ul>
+			</ul>));
 
 	/*
 	if (asset.title.endsWith('.') && !asset.title.endsWith('..'))
 		res.add(new Issue(Feedback.TITLE_PUNCTUATION, 'title'));
 	*/
-
-	function build_indicated_feedback(text, re)
-	{ return '<em>' + text.replace(re, x => `<span class="warn">${x}</span>`) + '</em>'; }
 
 	for (const elt of ['title', 'desc'])
 	{
@@ -516,17 +540,21 @@ function assess_writing(asset)
 		{
 			let corrected = asset[elt].replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"');
 			res.add(new Issue(Feedback.SPECIAL_CHARS, elt,
-				[
-					'"Smart" quotes are great for typography, but often don\'t render correctly in emulators',
-					build_indicated_feedback(asset[elt], TYPOGRAPHY_PUNCT) + ` &xrArr; <code>${corrected}</code>`,
-				]));
+				<ul>
+					<li>"Smart" quotes are great for typography, but often don't render correctly in emulators</li>
+					<li><em><HighlightedFeedback text={asset[elt]} pattern={TYPOGRAPHY_PUNCT} /></em> &#x27F9; <code>{corrected}</code></li>
+				</ul>));
 		}
 		else if (FOREIGN_RE.test(asset[elt]))
 			res.add(new Issue(Feedback.FOREIGN_CHARS, elt,
-				[build_indicated_feedback(asset[elt], FOREIGN_RE)]));
+				<ul>
+					<li><em><HighlightedFeedback text={asset[elt]} pattern={FOREIGN_RE} /></em></li>
+				</ul>));
 		else if (NON_ASCII_RE.test(asset[elt]))
 			res.add(new Issue(Feedback.SPECIAL_CHARS, elt,
-				[build_indicated_feedback(asset[elt], NON_ASCII_RE)]));
+				<ul>
+					<li><em><HighlightedFeedback text={asset[elt]} pattern={NON_ASCII_RE} /></em></li>
+				</ul>));
 	}
 
 	if (/[\{\[\(](.+)[\}\]\)]/.test(asset.desc))
@@ -572,7 +600,7 @@ function assess_leaderboard(lb)
 
 		// add context for issues
 		for (let issue of comp_res.issues)
-			issue.detail.push(`(Issue located in ${block} group)`);
+			;//issue.detail.push(`(Issue located in ${block} group)`);
 
 		// put the computed stats into a labeled group
 		let labeled = {};
@@ -604,10 +632,16 @@ function assess_code_notes(notes)
 	{
 		res.stats.author_counts.set(note.author, 1 + (res.stats.author_counts.get(note.author) || 0));
 		if (note.note.trim() == '')
-			res.add(new Issue(Feedback.NOTE_EMPTY, note));
+			res.add(new Issue(Feedback.NOTE_EMPTY, note,
+				<ul>
+					<li>Empty note at <code className="ref-link" data-ref={note.addr}>{toDisplayHex(note.addr)}</code></li>
+				</ul>));
 		
 		if (note.type == null && note.size == 1)
-			res.add(new Issue(Feedback.NOTE_NO_SIZE, note));
+			res.add(new Issue(Feedback.NOTE_NO_SIZE, note,
+				<ul>
+					<li>Code note at <code className="ref-link" data-ref={note.addr}>{toDisplayHex(note.addr)}</code></li>
+				</ul>));
 		else
 		{
 			let type = note.type ? note.type.name : 'Unknown';
@@ -641,6 +675,7 @@ function assess_rich_presence()
 	res.stats.display_groups = current.rp.display.length;
 	res.stats.cond_display = current.rp.display.filter(x => x.condition != null).length;
 	res.stats.max_lookups = Math.max(...current.rp.display.map(x => x.lookups.length));
+	res.stats.min_lookups = Math.min(...current.rp.display.map(x => x.lookups.length));
 
 	res.stats.is_dynamic_rp = res.stats.max_lookups > 0 || res.stats.cond_display > 0;
 
@@ -655,11 +690,15 @@ function assess_rich_presence()
 			if (d.condition != null)
 				for (const x of missing_notes(d.condition))
 					res.add(new Issue(Feedback.MISSING_NOTE_RP, null,
-						[`Missing note for condition of display #${di+1}: <code>0x${x.addr.toString(16).padStart(8, '0')}</code>`]));
+						<ul>
+							<li>Missing note for condition of display #{di+1}: <code>{toDisplayHex(x.addr)}</code></li>
+						</ul>));
 			for (const [li, look] of d.lookups.entries())
 				for (const x of missing_notes(look.calc))
 					res.add(new Issue(Feedback.MISSING_NOTE_RP, null,
-						[`Missing note for ${look.name} lookup of display #${di+1}: <code>0x${x.addr.toString(16).padStart(8, '0')}</code>`]));
+						<ul>
+							<li>Missing note for <code>{look.name}</code> lookup of display #{di+1}: <code>{toDisplayHex(x.addr)}</code></li>
+						</ul>));
 		}
 
 	return res;
@@ -704,7 +743,7 @@ function assess_set()
 
 	// number of achievements using each feature
 	res.stats.using_alt_groups = achievements.filter(x => current.assessment.achievements.get(x.id).stats.alt_groups > 0);
-	res.stats.using_delta = achievements.filter(x => { const s = current.assessment.achievements.get(x.id).stats; return s.deltas + s.priors > 0; });
+	res.stats.using_delta = achievements.filter(x => { const s = current.assessment.achievements.get(x.id).stats; return s.deltas > 0; });
 	res.stats.using_hitcounts = achievements.filter(x => current.assessment.achievements.get(x.id).stats.hit_counts_many > 0);
 	res.stats.using_checkpoint_hits = achievements.filter(x => current.assessment.achievements.get(x.id).stats.hit_counts_one > 0);
 	res.stats.using_pauselock = achievements.filter(x => current.assessment.achievements.get(x.id).stats.pause_locks > 0);
@@ -727,6 +766,43 @@ function assess_set()
 	}
 	res.stats.lb_instant_submission = lbfeedback.filter(x => x.stats.is_instant_submission).length;
 	res.stats.lb_conditional_value = lbfeedback.filter(x => x.stats.conditional_value).length;
+
+	// CODE NOTES
+	if (current.notes.length > 0)
+	{
+		let addrs = new Map();
+		function attach(addr, val)
+		{
+			if (!(addr in addrs)) addrs.set(addr, []);
+			addrs.get(addr).push(val);
+		}
+
+		for (const ach of achievements)
+			for (const addr of ach.logic.getAddresses())
+				attach(addr, `Achievement: ${ach.title}`);
+		for (const lb of leaderboards)
+			for (const [tag, logic] of Object.entries(lb.components))
+				for (const addr of logic.getAddresses())
+					attach(addr, `Leaderboard (${tag}): ${lb.title}`);
+
+		let displayMode = false, clause = 0;
+		for (const line of current.rp.text.split(/\r\n|(?!\r\n)[\n-\r\x85\u2028\u2029]/g))
+		{
+			if (line.toLowerCase().startsWith('Display:')) displayMode = true;
+			if (displayMode) for (const m of line.matchAll(/^(\?(.+)\?)?(.+)$/g))
+			{
+				clause++;
+				if (m[1] != '') // check the condition
+					for (const addr of Logic.fromString(m[2]).getAddresses())
+						attach(addr, `Rich Presence Display Condition #${clause}`)
+				for (const m2 of m[3].matchAll(/@([ _a-z][ _a-z0-9]*)\((.+?)\)/gi))
+					for (const addr of Logic.fromString(m2[2]).getAddresses())
+						attach(addr, `Rich Presence Display Lookup(${m2[1]}) in Clause #${clause}`)
+			}
+		}
+
+		res.stats.missing_notes = new Map([...addrs.entries()].filter(([x, _]) => !current.notes.some(note => note.contains(x))));
+	}
 
 	return res;
 }

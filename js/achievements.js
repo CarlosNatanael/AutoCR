@@ -18,7 +18,6 @@ const Console = Object.freeze({
 	PSP: { id: 41, name: "PlayStation Portable", icon: "psp", },
 });
 
-function console_icon(tag) { return `https://static.retroachievements.org/assets/images/system/${tag}.png`; }
 const ConsoleMap = Object.fromEntries(
 	Object.entries(Console).map(([k, v]) => [v.id, v])
 );
@@ -156,7 +155,7 @@ class AchievementSet
 		achset.id = json.ID;
 		achset.title = json.Title;
 		achset.icon = json.ImageIconURL;
-		achset.console = json.ConsoleID; // TODO: make enum
+		achset.console = json.ConsoleID in ConsoleMap ? ConsoleMap[json.ConsoleID] : null;
 
 		achset.achievements = json.Achievements
 			.filter((x) => !x.Title.toUpperCase().includes('[VOID]'))
