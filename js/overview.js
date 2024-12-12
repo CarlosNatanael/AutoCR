@@ -1,3 +1,12 @@
+const sidebar = ReactDOM.createRoot(document.getElementById('list-body'));
+const container = ReactDOM.createRoot(document.getElementById('info-container'));
+
+function clearSelected()
+{
+	for (let e of document.querySelectorAll('#list-body .selected'))
+		e.classList.remove('selected');
+}
+
 var current = { id: -1, };
 function reset_loaded()
 {
@@ -6,6 +15,7 @@ function reset_loaded()
 	current.notes = [];
 	current.rp = null;
 	current.assessment = {};
+	clearSelected();
 }
 
 function __noop(event)
@@ -13,9 +23,6 @@ function __noop(event)
 	event.stopPropagation();
 	event.preventDefault();
 }
-
-const sidebar = ReactDOM.createRoot(document.getElementById('list-body'));
-const container = ReactDOM.createRoot(document.getElementById('info-container'));
 
 document.ondragover = __noop;
 document.ondragenter = __noop;
@@ -123,10 +130,6 @@ document.onkeydown = function(event)
 
 function select_row(row)
 {
-	for (let tr of document.getElementById('list-body').children)
-		tr.classList.remove('selected');
-	row.classList.add('selected');
-	row.scrollIntoView({behavior: 'smooth', block: 'nearest'});
 }
 
 function get_game_title()
@@ -837,7 +840,7 @@ function SetOverviewTab()
 	if (current.set == null && current.local == null) return null;
 	let warn = current.assessment && current.assessment.set ?
 		SEVERITY_TO_CLASS[current.assessment.set.status()] : '';
-	return (<tr className={`asset-row ${warn}`} onClick={(e) => show_set_overview(e)}>
+	return (<tr className={`asset-row ${warn}`} onClick={(e) => show_overview(e, <AchievementSetOverview />)}>
 		<td className="asset-name">
 			🔍 Set Overview
 		</td>
@@ -849,7 +852,7 @@ function CodeNotesTab()
 	if (current.notes.length == 0) return null;
 	let warn = current.assessment && current.assessment.notes ? 
 		SEVERITY_TO_CLASS[current.assessment.notes.status()] : '';
-	return (<tr className={`asset-row ${warn}`} onClick={(e) => show_code_notes(e)}>
+	return (<tr className={`asset-row ${warn}`} onClick={(e) => show_overview(e, <CodeNotesOverview />)}>
 		<td className="asset-name">
 			📝 Code Notes
 		</td>
@@ -861,7 +864,7 @@ function RichPresenceTab()
 	if (!current.rp) return null;
 	let warn = current.assessment && current.assessment.rp ? 
 		SEVERITY_TO_CLASS[current.assessment.rp.status()] : '';
-	return (<tr className={`asset-row ${warn}`} onClick={(e) => show_rich_presence(e)}>
+	return (<tr className={`asset-row ${warn}`} onClick={(e) => show_overview(e, <RichPresenceOverview />)}>
 		<td className="asset-name">
 			🎮 Rich Presence
 		</td>
@@ -884,7 +887,7 @@ function AchievementTabs()
 		{achievements.map((ach) => {
 			let warn = current.assessment.achievements && current.assessment.achievements.has(ach.id) ?
 				SEVERITY_TO_CLASS[current.assessment.achievements.get(ach.id).status()] : '';
-			return (<tr key={`a${ach.id}`} className={`asset-row ${warn}`} onClick={(e) => show_achievement(e, ach)}>
+			return (<tr key={`a${ach.id}`} className={`asset-row ${warn}`} onClick={(e) => show_overview(e, <AchievementInfo ach={ach} />)}>
 				<td className="asset-name">
 					🏆 {ach.state.marker}{ach.title} ({ach.points})
 				</td>
@@ -906,7 +909,7 @@ function LeaderboardTabs()
 		{leaderboards.map((lb) => {
 			let warn = current.assessment.leaderboards && current.assessment.leaderboards.has(lb.id) ?
 				SEVERITY_TO_CLASS[current.assessment.leaderboards.get(lb.id).status()] : '';
-			return (<tr key={`b${lb.id}`} className={`asset-row ${warn}`} onClick={(e) => show_leaderboard(e, lb)}>
+			return (<tr key={`b${lb.id}`} className={`asset-row ${warn}`} onClick={(e) => show_overview(e, <LeaderboardInfo lb={lb} />)}>
 				<td className="asset-name">
 					📊 {lb.state.marker}{lb.title}
 				</td>
@@ -934,39 +937,13 @@ function SidebarTabs()
 	</>);
 }
 
-function show_achievement(e, ach)
+function show_overview(e, node)
 {
-	container.render(<AchievementInfo ach={ach} />);
+	container.render(node);
+	clearSelected();
+	e.currentTarget.classList.add('selected');
+	e.currentTarget.scrollIntoView({behavior: 'smooth', block: 'nearest'});
 	document.getElementById('asset-info').scrollTop = 0;
-	select_row(e.currentTarget);
-}
-
-function show_leaderboard(e, lb)
-{
-	container.render(<LeaderboardInfo lb={lb} />);
-	document.getElementById('asset-info').scrollTop = 0;
-	select_row(e.currentTarget);
-}
-
-function show_set_overview(e)
-{
-	container.render(<AchievementSetOverview />);
-	document.getElementById('asset-info').scrollTop = 0;
-	select_row(e.currentTarget);
-}
-
-function show_code_notes(e)
-{
-	container.render(<CodeNotesOverview />);
-	document.getElementById('asset-info').scrollTop = 0;
-	select_row(e.currentTarget);
-}
-
-function show_rich_presence(e)
-{
-	container.render(<RichPresenceOverview />);
-	document.getElementById('asset-info').scrollTop = 0;
-	select_row(e.currentTarget);
 }
 
 function update_assessment()
@@ -975,7 +952,6 @@ function update_assessment()
 	current.assessment.leaderboards = new Map(all_leaderboards().map(x => [x.id, assess_leaderboard(x)]));
 	current.assessment.notes = assess_code_notes(current.notes);
 	current.assessment.rp = assess_rich_presence(current.rp);
-
 	current.assessment.set = assess_set();
 }
 
