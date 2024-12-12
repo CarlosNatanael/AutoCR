@@ -474,32 +474,18 @@ function LeaderboardInfo({lb})
 	</>);
 }
 
+function ChartCanvas({ setup })
+{
+	let graph = React.useRef();
+	React.useEffect(() => { setup(graph.current) }, []);
+	return (<canvas ref={graph} />);
+}
+
 function AchievementSetOverview()
 {
 	const feedback = current.assessment.set;
 	const feedback_targets = new Set(feedback.issues.map(x => x.target));
 	const stats = feedback.stats;
-
-	let graph1 = React.useRef();
-	React.useEffect(() => {
-		let chartdata = [...stats.achievement_type.entries()];
-		const COLORS = { '': '#FBDD70', 'progression': '#8DD7E1', 'win_condition': '#A36FD4', 'missable': '#F28590', };
-		new Chart(graph1.current,
-			{
-				type: 'doughnut',
-				data: {
-					labels: chartdata.map(([k, _]) => k ? k : '(none)'),
-					datasets: [
-						{
-							label: 'achievement count',
-							data: chartdata.map(([_, v]) => v.length),
-							backgroundColor: chartdata.map(([k, _]) => COLORS[k]),
-						}
-					]
-				},
-			}
-		);
-	});
 
 	function AverageFeedback()
 	{
@@ -577,7 +563,25 @@ function AchievementSetOverview()
 		</div>
 		<div className="chart float-right">
 			<h3>Achievement Typing</h3>
-			<canvas ref={graph1} />
+			<ChartCanvas setup={(canvas) => {
+				let chartdata = [...stats.achievement_type.entries()];
+				const COLORS = { '': '#FBDD70', 'progression': '#8DD7E1', 'win_condition': '#A36FD4', 'missable': '#F28590', };
+				new Chart(canvas,
+					{
+						type: 'doughnut',
+						data: {
+							labels: chartdata.map(([k, _]) => k ? k : '(none)'),
+							datasets: [
+								{
+									label: 'achievement count',
+									data: chartdata.map(([_, v]) => v.length),
+									backgroundColor: chartdata.map(([k, _]) => COLORS[k]),
+								}
+							]
+						},
+					}
+				);
+			}} />
 		</div>
 		<div className="stats">
 			<h1>Statistics</h1>
