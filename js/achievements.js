@@ -16,6 +16,55 @@ const Console = Object.freeze({
 	PSX: { id: 12, name: "PlayStation", icon: "ps1", },
 	PS2: { id: 21, name: "PlayStation 2", icon: "ps2", },
 	PSP: { id: 41, name: "PlayStation Portable", icon: "psp", },
+	
+	// Atari
+	A2600: { id: 25, name: "Atari 2600", icon: "2600", },
+	A7800: { id: 51, name: "Atari 7800", icon: "7800", },
+	JAG: { id: 17, name: "Atari Jaguar", icon: "jag", },
+	JCD: { id: 77, name: "Atari Jaguar CD", icon: "jcd", },
+	LYNX: { id: 13, name: "Atari Lynx", icon: "lynx", },
+
+	// Sega
+	SG1K: { id: 33, name: "SG-1000", icon: "sg1k", },
+	SMS: { id: 11, name: "Master System", icon: "sms", },
+	GG: { id: 15, name: "Game Gear", icon: "gg", },
+	GEN: { id: 1, name: "Genesis/Mega Drive", icon: "md", },
+	SEGACD: { id: 9, name: "Sega CD", icon: "scd", },
+	_32X: { id: 10, name: "32X", icon: "32x", },
+	SAT: { id: 39, name: "Saturn", icon: "sat", },
+	DC: { id: 40, name: "Dreamcast", icon: "dc", },
+
+	// NEC
+	TG16: { id: 8, name: "PC Engine/TurboGrafx-16", icon: "pce", },
+	TGCD: { id: 76, name: "PC Engine CD/TurboGrafx-CD", icon: "pccd", },
+	PC8088: { id: 47, name: "PC-8000/8800", icon: "8088", },
+	PCFX: { id: 49, name: "PC-FX", icon: "pc-fx", },
+
+	// SNK
+	NGCD: { id: 56, name: "Neo Geo CD", icon: "ngcd", },
+	NGP: { id: 14, name: "Neo Geo Pocket", icon: "ngp", },
+
+	// Other
+	_3DO: { id: 43, name: "3DO Interactive Multiplayer", icon: "3do", },
+	CPC: { id: 37, name: "Amstrad CPC", icon: "cpc", },
+	APPLEII: { id: 38, name: "Apple II", icon: "a2", },
+	ARC: { id: 27, name: "Arcade", icon: "arc", },
+	A2001: { id: 73, name: "Arcadia 2001", icon: "a2001", },
+	ARD: { id: 71, name: "Arduboy", icon: "ard", },
+	CV: { id: 44, name: "ColecoVision", icon: "cv", },
+	ELEK: { id: 75, name: "Elektor TV Games Computer", icon: "elek", },
+	CHF: { id: 57, name: "Fairchild Channel F", icon: "chf", },
+	INTV: { id: 45, name: "Intellivision", icon: "intv", },
+	VC4000: { id: 74, name: "Interton VC 4000", icon: "vc4000", },
+	ODY2: { id: 23, name: "Magnavox Odyssey 2", icon: "mo2", },
+	DUCK: { id: 69, name: "Mega Duck", icon: "duck", },
+	MSX: { id: 29, name: "MSX", icon: "msx", },
+	EXE: { id: 102, name: "Standalone", icon: "exe", },
+	UZE: { id: 80, name: "Uzebox", icon: "uze", },
+	VECT: { id: 46, name: "Vectrex", icon: "vect", },
+	WASM4: { id: 72, name: "WASM-4", icon: "wasm4", },
+	WSV: { id: 63, name: "Watara Supervision", icon: "wsv", },
+	WS: { id: 53, name: "WonderSwan", icon: "ws", },
 });
 
 const ConsoleMap = Object.fromEntries(
