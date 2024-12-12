@@ -128,7 +128,7 @@ class ReqOperand
 	type;
 	value;
 	size;
-	constructor(value, type, size)
+	constructor({ value = null, type, size = null })
 	{
 		this.value = value;
 		this.type = type;
@@ -142,11 +142,11 @@ class ReqOperand
 			let match = def.match(OPERAND_RE);
 			// address for memory read
 			if (match[1])
-				return new ReqOperand(
-					parseInt(match[4].trim(), 16), 
-					ReqTypeMap[match[2].trim()], 
-					MemSizeMap[match[3].trim()]
-				);
+				return new ReqOperand({
+					value: parseInt(match[4].trim(), 16), 
+					type: ReqTypeMap[match[2].trim()], 
+					size: MemSizeMap[match[3].trim()],
+				});
 			// value in decimal/float
 			else if (match[5])
 			{
@@ -154,22 +154,20 @@ class ReqOperand
 				let rtype = match[6].trim();
 				if (rtype == '') rtype = 'v';
 
-				return new ReqOperand(
-					+match[7].trim(), 
-					ReqTypeMap[rtype.toLowerCase()], 
-					null
-				);
+				return new ReqOperand({
+					value: +match[7].trim(), 
+					type: ReqTypeMap[rtype.toLowerCase()],
+				});
 			}
 			// value in hex with size info
 			else if (match[8])
-				return new ReqOperand(
-					parseInt(match[9], 16), 
-					ReqType.VALUE, 
-					null
-				);
+				return new ReqOperand({
+					value: parseInt(match[9], 16), 
+					type: ReqType.VALUE,
+				});
 			// recall
 			else if (match[10])
-				return new ReqOperand('', ReqType.RECALL, null);
+				return new ReqOperand({ type: ReqType.RECALL, });
 		}
 		catch (e) { throw new LogicParseError('operand', def); }
 	}
@@ -219,27 +217,21 @@ const OPERAND_PARSING = "[~dpbvf]?(?:(?:0x)+[G-Z ]?|f[A-Z])[0-9A-F]{1,8}|[fv]?[-
 const REQ_RE = new RegExp(`^([A-Z]:)?(${OPERAND_PARSING})(?:([!<>=+\\-*/&\\^%]{1,2})(${OPERAND_PARSING}))?(?:\\.(\\d+)\\.)?$`, "i");
 class Requirement
 {
-	lhs;
 	flag = null;
+	lhs;
 	op = null;
 	rhs = null;
 	hits = 0;
-	constructor()
+	constructor({ flag = null, lhs, op = null, rhs = null, hits = 0 })
 	{
-
+		this.flag = flag;
+		this.lhs = lhs;
+		this.op = op;
+		this.rhs = rhs;
+		this.hits = 0;
 	}
 
-	clone()
-	{
-		let o = new Requirement();
-		o.flag = this.flag;
-		o.lhs = this.lhs;
-		o.op = this.op;
-		o.rhs = this.rhs;
-		o.hits = this.hits;
-		return o;
-	}
-
+	clone() { return new Requirement({...this}); }
 	hasHits() { return !this.flag || !this.flag.scalable; }
 
 	isAlwaysTrue() { return this.op == '=' && ReqOperand.equals(this.lhs, this.rhs); }
@@ -256,7 +248,7 @@ class Requirement
 
 	static fromString(def)
 	{
-		let req = new Requirement();
+		let req = new Requirement({});
 		try
 		{
 			let match = def.match(REQ_RE);
