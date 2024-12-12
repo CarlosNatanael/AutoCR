@@ -591,7 +591,7 @@ function AchievementSetOverview()
 			<ul>
 				<li>Achievements</li>
 				<ul>
-					<li>{stats.achievement_count} achievements: 
+					<li>{stats.achievement_count} achievements: <></>
 						{[...stats.achievement_type.entries()].map(([k, v]) => `${v.length} ${k ? k : 'standard'}`).join(', ')}</li>
 					<li>Total points: {stats.total_points}</li>
 					<li><span title="~7 points per achievement is a good target">Average points</span>: ~{stats.avg_points.toFixed(1)} <AverageFeedback /></li>
