@@ -654,7 +654,7 @@ function CodeNotesTable({notes = [], issues = []})
 			</thead>
 			<tbody>
 				{notes.map(note => <tr key={note.addr} className={issues.some(x => x.target == note) ? 'warn' : ''}>
-					<td>{toDisplayHex(note.addr)}{note.size > 8 || note.type == null ? (<><br/>&rarr;&nbsp;{toDisplayHex(note.addr + note.size - 1)}</>) : <></>}</td>
+					<td>{toDisplayHex(note.addr)}{note.isArray() ? (<><br/>&#x2010;&nbsp;{toDisplayHex(note.addr + note.size - 1)}</>) : <></>}</td>
 					<td><pre>{note.note}</pre></td>
 					<td>
 						<span className="tooltip">
@@ -678,12 +678,13 @@ function CodeNotesOverview()
 	const feedback_targets = new Set(feedback.issues.map(x => x.target));
 	const stats = feedback.stats;
 
-	let authors = new Set(current.notes.map(x => x.author));
-	const [authState, setAuthState] = React.useState(Object.fromEntries([...authors].map(x => [x, true])));
+	let authors = new Set(current.notes.map(note => note.author));
+	const [authState, setAuthState] = React.useState(Object.fromEntries([...authors].map(a => [a, true])));
+	const [warnsOnly, setWarnsOnly] = React.useState(false);
 
-	let displaynotes = current.notes.filter(x => authState[x.author]);
-	let _hiddennotes = current.notes.filter(x => !authState[x.author]);
-	let displayissues = feedback.issues.filter(x => !_hiddennotes.includes(x.target));
+	let displaynotes = current.notes.filter(note => authState[note.author]);
+	if (warnsOnly) displaynotes = displaynotes.filter(note => feedback_targets.has(note))
+	let displayissues = feedback.issues.filter(issue => !issue.target || displaynotes.includes(issue.target));
 
 	return (<>
 		<div className="main-header">
@@ -694,16 +695,23 @@ function CodeNotesOverview()
 			<h1 className="asset-title">
 				{get_game_title()}
 			</h1>
-			<p>
-				<a href={`https://retroachievements.org/codenotes.php?g=${current.id}`}>{current.notes.length} code notes
-					</a> by {authors.size} author(s): {[...authors].map((name, i) => <React.Fragment key={name}>{i > 0 ? ' | ' : ''} 
-					<span>
-						<input type="checkbox" defaultChecked onChange={(e) => {
-							setAuthState(Object.assign({}, authState, {[name]: e.currentTarget.checked}));
-						}} /> <a href={`https://retroachievements.org/user/${name}`}>{name}</a>
-					</span>
-				</React.Fragment>)}
-			</p>
+			<ul className="list-inside">
+				<li>
+					<a href={`https://retroachievements.org/codenotes.php?g=${current.id}`}>{current.notes.length} code notes</a> <></>
+						by {authors.size} author(s): {[...authors].map((name, i) => <React.Fragment key={name}>{i > 0 ? ' | ' : ''} 
+						<span>
+							<input type="checkbox" defaultChecked onChange={(e) => {
+								setAuthState(Object.assign({}, authState, {[name]: e.currentTarget.checked}));
+							}} /> <a href={`https://retroachievements.org/user/${name}`}>{name}</a>
+						</span>
+					</React.Fragment>)}
+				</li>
+				<li>
+					Only show warnings <input type="checkbox" onChange={(e) => {
+						setWarnsOnly(e.currentTarget.checked);
+					}} />
+				</li>
+			</ul>
 		</div>
 
 		<CodeNotesTable notes={displaynotes} issues={displayissues} />

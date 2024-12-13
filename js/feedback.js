@@ -308,9 +308,13 @@ function assess_logic(logic)
 
 	if (!logic.value)
 	{
-		if (res.stats.deltas + res.stats.priors == 0)
-			res.add(new Issue(Feedback.MISSING_DELTA, null));
-		else (res.stats.deltas == 0) // priors > 0, implicitly
+		if (res.stats.deltas == 0)
+			res.add(new Issue(Feedback.MISSING_DELTA, null,
+				<ul>
+					<li><a href="#">Why should all achievements use Deltas?</a></li>
+				</ul>));
+
+		if (res.stats.priors > 0)
 		{
 			for (const [gi, g] of logic.groups.entries())
 			{

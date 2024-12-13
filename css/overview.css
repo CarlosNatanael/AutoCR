@@ -374,3 +374,4 @@ pre code
 .float-right { float: right; }
 .clear { clear: both; }
 .fade { opacity: 75%; }
+.list-inside li { list-style-position: inside; }

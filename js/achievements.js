@@ -290,6 +290,8 @@ class CodeNote
 		[this.type, this.size] = CodeNote.getSize(note);
 	}
 
+	isArray() { return this.size >= (this.type ? this.type.bytes : 1) * 2; }
+
 	contains(addr)
 	{
 		return addr >= this.addr && addr < this.addr + this.size;
