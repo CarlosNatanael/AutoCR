@@ -282,7 +282,7 @@ function LogicTable({logic, issues = []})
 
 function ConsoleIcon({console = null})
 {
-	if (console == null) console = current.set.console;
+	if (console == null && current.set) console = current.set.console;
 	if (console == null) return null;
 
 	return (<a href={`https://retroachievements.org/system/${console.id}/games`}>
