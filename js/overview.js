@@ -1,5 +1,6 @@
 const sidebar = ReactDOM.createRoot(document.getElementById('list-body'));
 const container = ReactDOM.createRoot(document.getElementById('info-container'));
+const filePicker = document.getElementById('file-picker');
 
 function clearSelected()
 {
@@ -18,6 +19,10 @@ function reset_loaded()
 	clearSelected();
 }
 
+filePicker.addEventListener('change', () => {
+	load_files(filePicker.files);
+});
+
 function __noop(event)
 {
 	event.stopPropagation();
@@ -30,7 +35,39 @@ document.ondragenter = __noop;
 document.ondrop = function(event)
 {
 	event.preventDefault();
-	for (const file of event.dataTransfer.files)
+	load_files(event.dataTransfer.files);
+}
+
+document.onkeydown = function(event)
+{
+	let handled = true;
+	let crow = document.querySelector('.asset-row.selected');
+	switch (event.key)
+	{
+		case "Up":
+		case "ArrowUp":
+			for (let n = crow.previousSibling; n; n = n.previousSibling)
+				if (n.classList.contains('asset-row')) { n.click(); break; }
+			break;
+		case "Down":
+		case "ArrowDown":
+			for (let n = crow.nextSibling; n; n = n.nextSibling)
+				if (n.classList.contains('asset-row')) { n.click(); break; }
+			break;
+		default:
+			handled = false;
+	}
+
+	if (handled)
+	{
+		event.preventDefault();
+		event.stopPropagation();
+	}
+}
+
+function load_files(fileList)
+{
+	for (const file of fileList)
 	{
 		let idregex = file.name.match(/^(\d+)/);
 		let thisid = +idregex[1] || -1;
@@ -98,33 +135,6 @@ document.ondrop = function(event)
 				}
 			};
 		reader.readAsText(file);
-	}
-}
-
-document.onkeydown = function(event)
-{
-	let handled = true;
-	let crow = document.querySelector('.asset-row.selected');
-	switch (event.key)
-	{
-		case "Up":
-		case "ArrowUp":
-			for (let n = crow.previousSibling; n; n = n.previousSibling)
-				if (n.classList.contains('asset-row')) { n.click(); break; }
-			break;
-		case "Down":
-		case "ArrowDown":
-			for (let n = crow.nextSibling; n; n = n.nextSibling)
-				if (n.classList.contains('asset-row')) { n.click(); break; }
-			break;
-		default:
-			handled = false;
-	}
-
-	if (handled)
-	{
-		event.preventDefault();
-		event.stopPropagation();
 	}
 }
 
