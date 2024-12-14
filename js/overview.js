@@ -910,6 +910,20 @@ function RichPresenceOverview()
 	</>);
 }
 
+function UnloadTab()
+{
+	if (current.set == null && current.local == null) return null;
+	return (<tr className="asset-row" id="unload" onClick={(e) => {
+		delete_file_cache();
+		reset_loaded();
+		rebuild_sidebar();
+	}}>
+		<td className="asset-name">
+			🗑️ Unload  Set Data
+		</td>
+	</tr>);
+}
+
 const SEVERITY_TO_CLASS = ['pass', 'warn', 'fail', 'fail'];
 function SetOverviewTab()
 {
@@ -999,12 +1013,13 @@ function SidebarTabs()
 	React.useEffect(() => {
 		if (document.querySelectorAll('#list-body .selected').length == 0)
 		{
-			let first = document.querySelector('#list-body .asset-row');
+			let first = document.querySelector('#list-body .asset-row:not(#unload)');
 			if (first) first.click();
 		}
 	})
 
 	return (<>
+		<UnloadTab />
 		<SetOverviewTab />
 		<CodeNotesTab />
 		<RichPresenceTab />
