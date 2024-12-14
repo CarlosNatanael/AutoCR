@@ -832,7 +832,7 @@ function RichPresenceOverview()
 				<li>Memory size: {stats.mem_length} / 65535</li>
 				<li>Custom macros: {stats.custom_macros.size}</li>
 				<ul>
-					{[...stats.custom_macros.entries()].map(([k, v]) => <li key={k}><code>{k}</code> &rarr; <code>{v.type}</code></li>)}
+					{[...stats.custom_macros.entries()].map(([k, v]) => <li key={k}><code>{k}</code> &rarr; {v ? <code>{v.type}</code> : 'unknown'}</li>)}
 				</ul>
 				<li>Lookups: {stats.lookups.size} ({[...stats.lookups.values()].filter(lookup => lookup.some(x => x.isFallback())).length} with default values)</li>
 				<li>Display clauses: {stats.display_groups} ({stats.cond_display} conditional displays)</li>
