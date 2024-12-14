@@ -32,6 +32,7 @@ function __noop(event)
 document.ondragover = __noop;
 document.ondragenter = __noop;
 
+
 document.ondrop = function(event)
 {
 	event.preventDefault();
@@ -65,8 +66,54 @@ document.onkeydown = function(event)
 	}
 }
 
+function add_file_cache(data, type)
+{
+	let cache = [];
+	if (localStorage.getItem('fileList')) {
+		cache = JSON.parse(localStorage.getItem('fileList'));
+	}
+	cache.push({data, type});
+    localStorage.setItem('fileList', JSON.stringify(cache));
+}
+
+function load_file_cache()
+{
+	console.log('loading file cache');
+	if (localStorage.getItem('fileList'))
+	{
+		let fileList = JSON.parse(localStorage.getItem('fileList'));
+		console.log(fileList);
+		for (const file of fileList)
+		{
+			if (file.type === 'notes')
+			{
+				load_code_notes(JSON.parse(file.data));
+			}
+			else if (file.type === 'set')
+			{
+				console.log(JSON.parse(file.data));
+				load_achievement_set(JSON.parse(file.data));
+			}
+			else if (file.type === 'rp')
+			{
+				load_rich_presence(file.data, true);
+			}
+			else if (file.type === 'local')
+			{
+				load_user_file(file.data);
+			}
+		}
+	}
+}
+
+function delete_file_cache()
+{
+	localStorage.removeItem('fileList');
+}
+
 function load_files(fileList)
 {
+	delete_file_cache();
 	for (const file of fileList)
 	{
 		let idregex = file.name.match(/^(\d+)/);
@@ -84,6 +131,7 @@ function load_files(fileList)
 				try
 				{
 					let data = JSON.parse(event.target.result);
+					add_file_cache(event.target.result, 'notes');
 					load_code_notes(data);
 				}
 				catch (e)
@@ -98,6 +146,7 @@ function load_files(fileList)
 				try
 				{
 					let data = JSON.parse(event.target.result);
+					add_file_cache(event.target.result, 'set');
 					load_achievement_set(data);
 				}
 				catch (e)
@@ -112,6 +161,7 @@ function load_files(fileList)
 				try
 				{
 					let data = event.target.result;
+					add_file_cache(data, 'rp');
 					load_rich_presence(data, true);
 				}
 				catch (e)
@@ -126,6 +176,7 @@ function load_files(fileList)
 				try
 				{
 					let data = event.target.result;
+					add_file_cache(data, 'local');
 					load_user_file(data);
 				}
 				catch (e)
@@ -1015,3 +1066,5 @@ function rebuild_sidebar()
 {
 	sidebar.render(<SidebarTabs />);
 }
+
+load_file_cache();
