@@ -790,20 +790,21 @@ function assess_set()
 					attach(addr, `Leaderboard (${tag}): ${lb.title}`);
 
 		let displayMode = false, clause = 0;
-		for (const line of current.rp.text.split(/\r\n|(?!\r\n)[\n-\r\x85\u2028\u2029]/g))
-		{
-			if (line.toLowerCase().startsWith('Display:')) displayMode = true;
-			if (displayMode) for (const m of line.matchAll(/^(\?(.+)\?)?(.+)$/g))
+		if (current.rp && current.rp.text)
+			for (const line of current.rp.text.split(/\r\n|(?!\r\n)[\n-\r\x85\u2028\u2029]/g))
 			{
-				clause++;
-				if (m[1] != '') // check the condition
-					for (const addr of Logic.fromString(m[2]).getAddresses())
-						attach(addr, `Rich Presence Display Condition #${clause}`)
-				for (const m2 of m[3].matchAll(/@([ _a-z][ _a-z0-9]*)\((.+?)\)/gi))
-					for (const addr of Logic.fromString(m2[2]).getAddresses())
-						attach(addr, `Rich Presence Display Lookup(${m2[1]}) in Clause #${clause}`)
+				if (line.toLowerCase().startsWith('Display:')) displayMode = true;
+				if (displayMode) for (const m of line.matchAll(/^(\?(.+)\?)?(.+)$/g))
+				{
+					clause++;
+					if (m[1] != '') // check the condition
+						for (const addr of Logic.fromString(m[2]).getAddresses())
+							attach(addr, `Rich Presence Display Condition #${clause}`)
+					for (const m2 of m[3].matchAll(/@([ _a-z][ _a-z0-9]*)\((.+?)\)/gi))
+						for (const addr of Logic.fromString(m2[2]).getAddresses())
+							attach(addr, `Rich Presence Display Lookup(${m2[1]}) in Clause #${clause}`)
+				}
 			}
-		}
 
 		res.stats.missing_notes = new Map([...addrs.entries()].filter(([x, _]) => !current.notes.some(note => note.contains(x))));
 	}

@@ -503,12 +503,14 @@ function AchievementSetOverview()
 	function CodeNotesInfo()
 	{
 		if (current.notes.length == 0) return null;
+		let notestats = current.assessment.notes.stats;
+		let setstats = current.assessment.set.stats;
 		return (<>
 			<li>Code Notes:</li>
 			<ul>
-				<li>Missing code notes: {stats.missing_notes.size}</li>
+				<li>Missing code notes: {setstats.missing_notes.size}</li>
 				<ul>
-					{[...stats.missing_notes.entries()].sort(([a, _1], [b, _2]) => a - b)
+					{[...setstats.missing_notes.entries()].sort(([a, _1], [b, _2]) => a - b)
 						.map(([addr, loc]) => <React.Fragment key={addr}>
 							<li><code>{toDisplayHex(addr)}</code></li>
 							<ul>
@@ -755,6 +757,8 @@ function HighlightedRichPresence({script})
 */
 function HighlightedRichPresence({script, update = null})
 {
+	if (!script) return null;
+
 	let ref = React.useRef();
 	React.useEffect(() => {
 		let root = ref.current;
