@@ -87,6 +87,10 @@ const Feedback = Object.freeze({
 		ref: ["https://docs.retroachievements.org/guidelines/content/code-notes.html#specifying-memory-addresses-size",], },
 	NOTE_ENUM_HEX: { severity: FeedbackSeverity.WARN, desc: "Enumerated hex values in code notes must be prefixed with \"0x\".",
 		ref: ["https://docs.retroachievements.org/guidelines/content/code-notes.html#adding-values-and-labels",], },
+	BAD_REGION_NOTE: { severity: FeedbackSeverity.WARN, desc: "Some memory regions are unsafe, redundant, or should not otherwise be used.",
+		ref: ['https://docs.retroachievements.org/developer-docs/console-specific-tips.html'], },
+	UNALIGNED_NOTE: { severity: FeedbackSeverity.INFO, desc: "16- and 32-bit data is usually, but not always, word-aligned.",
+		ref: [], },
 
 	// rich presence
 	NO_DYNAMIC_RP: { severity: FeedbackSeverity.WARN, desc: "Dynamic rich presence is required for all sets.",
@@ -114,6 +118,17 @@ const Feedback = Object.freeze({
 		ref: [], },
 	STALE_ADDADDRESS: { severity: FeedbackSeverity.WARN, desc: "AddAddress should only ever read from the current frame. Stale references with AddAddress can be dangerous.",
 		ref: ['https://docs.retroachievements.org/developer-docs/hit-counts.html',], },
+	NEGATIVE_OFFSET: { severity: FeedbackSeverity.WARN, desc: "Negative pointer offsets are wrong in the vast majority of cases and are incompatible with the way pointers actually work. At best, this will only work incidentally.",
+		ref: ['https://docs.retroachievements.org/developer-docs/flags/addaddress.html#calculating-your-offset'], },
+	BAD_REGION_LOGIC: { severity: FeedbackSeverity.WARN, desc: "Some memory regions are unsafe, redundant, or should not otherwise be used for achievement logic.",
+		ref: ['https://docs.retroachievements.org/developer-docs/console-specific-tips.html'], },
+	TYPE_MISMATCH: { severity: FeedbackSeverity.WARN, desc: "Memory accessor doesn't match size listed in code note.",
+		ref: [
+			'https://docs.retroachievements.org/developer-docs/memory-inspector.html',
+			'https://docs.retroachievements.org/guidelines/content/code-notes.html',
+		], },
+	SOURCE_MOD_MEASURED: { severity: FeedbackSeverity.ERROR, desc: "Placing a source modification on a Measured requirement can cause faulty values in older versions of RetroArch (pre-1.10.1).",
+		ref: ['https://discord.com/channels/310192285306454017/386068797921951755/1247501391908307027',], },
 	PAUSELOCK_NO_RESET: { severity: FeedbackSeverity.WARN, desc: "PauseLocks require a reset, either via ResetNextIf, or a ResetIf in another group.",
 		ref: ['https://docs.retroachievements.org/developer-docs/flags/pauseif.html#pauseif-with-hit-counts',], },
 	HIT_NO_RESET: { severity: FeedbackSeverity.WARN, desc: "Hit counts require a reset, either via ResetIf or ResetNextIf.",
