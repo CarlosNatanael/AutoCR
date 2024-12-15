@@ -155,11 +155,9 @@ function all_leaderboards()
 	return res;
 }
 
-function get_note(v)
+function get_note_text(addr)
 {
-	let addr = v, note = null;
-	for (const cn of current.notes || [])
-		if (cn.contains(addr)) note = cn;
+	let note = get_note(addr, current.notes);
 	if (!note) return null;
 
 	let note_text = "";
@@ -198,12 +196,12 @@ function LogicTable({logic, issues = []})
 			// if this is a memory read, add the code note, if possible
 			else if (operand.type.addr && !skipNote)
 			{
-				const note = get_note(operand.value);
-				if (note) return (
+				const note_text = get_note_text(operand.value);
+				if (note_text) return (
 					<span className="tooltip">
 						{operand.toValueString()}
 						<span className="tooltip-info">
-							<pre>{note}</pre>
+							<pre>{note_text}</pre>
 						</span>
 					</span>
 				);
@@ -958,13 +956,14 @@ function show_overview(e, node)
 	document.getElementById('asset-info').scrollTop = 0;
 }
 
-function update_assessment()
+function update()
 {
 	current.assessment.achievements = new Map(all_achievements().map(x => [x.id, assess_achievement(x)]));
 	current.assessment.leaderboards = new Map(all_leaderboards().map(x => [x.id, assess_leaderboard(x)]));
 	current.assessment.notes = assess_code_notes(current.notes);
 	current.assessment.rp = assess_rich_presence(current.rp);
 	current.assessment.set = assess_set();
+	sidebar.render(<SidebarTabs />);
 }
 
 function load_achievement_set(json)
@@ -972,16 +971,14 @@ function load_achievement_set(json)
 	current.set = AchievementSet.fromJSON(json);
 	if (json.RichPresencePatch)
 		load_rich_presence(json.RichPresencePatch, false);
-	update_assessment();
-	rebuild_sidebar();
+	update();
 }
 
 function load_user_file(txt)
 {
 	current.local = AchievementSet.fromLocal(txt);
 	current.local.id = current.id;
-	update_assessment();
-	rebuild_sidebar();
+	update();
 }
 
 function load_code_notes(json)
@@ -989,19 +986,12 @@ function load_code_notes(json)
 	current.notes = [];
 	for (const obj of json) if (obj.Note)
 		current.notes.push(new CodeNote(obj.Address, obj.Note, obj.User));
-	update_assessment();
-	rebuild_sidebar();
+	update();
 }
 
 function load_rich_presence(txt, from_file)
 {
 	if (!current.rp || from_file)
 		current.rp = RichPresence.fromText(txt);
-	update_assessment();
-	rebuild_sidebar();
-}
-
-function rebuild_sidebar()
-{
-	sidebar.render(<SidebarTabs />);
+	update();
 }
