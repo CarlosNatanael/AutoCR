@@ -331,7 +331,7 @@ function assess_logic(logic)
 					if (!prev_addaddress && note)
 					{
 						// if the note size info is unknown, give up I guess
-						if (operand.size != note.type && operand.size && note.type)
+						if (note.type && operand.size && !BitProficiency.has(operand.size) && operand.size != note.type)
 							res.add(new Issue(Feedback.TYPE_MISMATCH, req,
 								<ul>
 									<li>Accessing <code>{toDisplayHex(operand.value)}</code> as <code>{operand.size.name}</code></li>
@@ -766,7 +766,7 @@ function assess_rich_presence()
 						if (!prev_addaddress && note)
 						{
 							// if the note size info is unknown, give up I guess
-							if (operand.size != note.type && operand.size && note.type)
+							if (note.type && operand.size && !BitProficiency.has(operand.size) && operand.size != note.type)
 								res.add(new Issue(Feedback.TYPE_MISMATCH, req,
 									<ul>
 										<li>Accessing <code>{toDisplayHex(operand.value)}</code> in {where} as <code>{operand.size.name}</code></li>
