@@ -248,7 +248,7 @@ function LogicTable({logic, issues = []})
 			{[...group.entries()].map(([ri, req]) => {
 				let match = [...issues.entries()].filter(([_, issue]) => issue.target == req);
 				let skipNote = ri > 0 && group[ri-1].flag && group[ri-1].flag == ReqFlag.ADDADDRESS;
-				return (<tr key={`g${gi}-r${ri}`} className={match.length ? 'warn' : ''}>
+				return (<tr key={`g${gi}-r${ri}`} className={match.some(([_, issue]) => issue.type.severity >= FeedbackSeverity.WARN) ? 'warn' : ''}>
 					<td>{ri + 1} {match.map(([ndx, _]) => 
 						<React.Fragment key={ndx}>{' '} <sup key={ndx}>(#{ndx+1})</sup></React.Fragment>)}</td>
 					<td>{req.flag ? req.flag.name : ''}</td>

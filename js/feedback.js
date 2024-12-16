@@ -120,9 +120,9 @@ const Feedback = Object.freeze({
 		ref: ['https://docs.retroachievements.org/developer-docs/hit-counts.html',], },
 	NEGATIVE_OFFSET: { severity: FeedbackSeverity.WARN, desc: "Negative pointer offsets are wrong in the vast majority of cases and are incompatible with the way pointers actually work. At best, this will only work incidentally.",
 		ref: ['https://docs.retroachievements.org/developer-docs/flags/addaddress.html#calculating-your-offset'], },
-	BAD_REGION_LOGIC: { severity: FeedbackSeverity.WARN, desc: "Some memory regions are unsafe, redundant, or should not otherwise be used for achievement logic.",
+	BAD_REGION_LOGIC: { severity: FeedbackSeverity.ERROR, desc: "Some memory regions are unsafe, redundant, or should not otherwise be used for achievement logic.",
 		ref: ['https://docs.retroachievements.org/developer-docs/console-specific-tips.html'], },
-	TYPE_MISMATCH: { severity: FeedbackSeverity.WARN, desc: "Memory accessor doesn't match size listed in code note.",
+	TYPE_MISMATCH: { severity: FeedbackSeverity.INFO, desc: "Memory accessor doesn't match size listed in code note.",
 		ref: [
 			'https://docs.retroachievements.org/developer-docs/memory-inspector.html',
 			'https://docs.retroachievements.org/guidelines/content/code-notes.html',
@@ -331,7 +331,7 @@ function assess_logic(logic)
 					if (!prev_addaddress && note)
 					{
 						// if the note size info is unknown, give up I guess
-						if (note.type && operand.size && !BitProficiency.has(operand.size) && operand.size != note.type)
+						if (note.type && operand.size && !PartialAccess.has(operand.size) && operand.size != note.type)
 							res.add(new Issue(Feedback.TYPE_MISMATCH, req,
 								<ul>
 									<li>Accessing <code>{toDisplayHex(operand.value)}</code> as <code>{operand.size.name}</code></li>
@@ -766,7 +766,7 @@ function assess_rich_presence()
 						if (!prev_addaddress && note)
 						{
 							// if the note size info is unknown, give up I guess
-							if (note.type && operand.size && !BitProficiency.has(operand.size) && operand.size != note.type)
+							if (note.type && operand.size && !PartialAccess.has(operand.size) && operand.size != note.type)
 								res.add(new Issue(Feedback.TYPE_MISMATCH, req,
 									<ul>
 										<li>Accessing <code>{toDisplayHex(operand.value)}</code> in {where} as <code>{operand.size.name}</code></li>
