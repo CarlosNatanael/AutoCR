@@ -145,9 +145,51 @@ div.instructions
 img.icon
 {
 	border: 1px solid black;
+	display: block;
+}
+
+img.float-left
+{
 	margin-right: 20px;
 	float: left;
-	display: block;
+}
+
+.asset-title
+{
+	margin-bottom: 10px;
+}
+
+.asset-desc
+{
+	margin: 10px;
+}
+
+.asset-card
+{
+	border: 1px solid black;
+	border-radius: 5px;
+	background-color: #E8E8E8;
+	cursor: pointer;
+
+	display: flex;
+	flex-flow: row nowrap;
+	justify-content: flex-start;
+	align-items: center;
+	column-gap: 15px;
+
+	padding: 5px;
+	margin-bottom: 10px;
+}
+
+.asset-card div p
+{
+	margin: 5px;
+}
+
+.asset-card.warning
+{
+	background-color: #FFCCCC;
+	border-color: #FF0000;
 }
 
 .hidden
@@ -232,11 +274,12 @@ img.icon
 	100% { background-color: inherit; }
 }
 
-#info-container .data-table table tbody tr.highlight td:first-child
+#info-container .data-table table tbody tr.selected td:first-child
 {
 	animation-name: bg-highlight;
 	animation-duration: 1s;
 	animation-iteration-count: 5;
+	animation-delay: 1s;
 }
 
 #info-container .data-table table thead td,

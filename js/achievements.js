@@ -1,6 +1,9 @@
 const Console = Object.freeze({
 	// Nintendo
-	GB: { id: 4, name: "Game Boy", icon: "gb", },
+	GB: { id: 4, name: "Game Boy", icon: "gb", 
+		regions: [
+			
+		]},
 	GBC: { id: 6, name: "Game Boy Color", icon: "gbc", },
 	GBA: { id: 5, name: "Game Boy Advance", icon: "gba", },
 	NES: { id: 7, name: "NES/Famicom", icon: "nes", },
@@ -77,19 +80,31 @@ const AssetState = Object.freeze({
 	LOCAL: { rank: 2, name: 'local', marker: '✏️ '},
 });
 
-class Achievement
+class Asset
 {
 	id = -1;
+	index = -1;
+	author = null;
 	title;
 	desc;
+	#ref = '';
+	constructor()
+	{
+		this.#ref = crypto.randomUUID();
+	}
+
+	toRefString(){ return `asset-${this.#ref}`; }
+}
+
+class Achievement extends Asset
+{
 	points = 5;
-	author;
 	achtype = "";
 	badge;
 	state;
 	logic;
 
-	constructor() {  }
+	constructor() { super(); }
 	static fromJSON(json)
 	{
 		let ach = new Achievement();
@@ -125,18 +140,16 @@ class Achievement
 	}
 }
 
-FAST_WORDS = ["fast", "quick", "speed", "rush", "hurry", "rapid"];
-class Leaderboard
+class Leaderboard extends Asset
 {
-	id = -1;
-	title;
-	desc;
+	static COMPONENT_TAGS = ['STA', 'CAN', 'SUB', 'VAL'];
+
 	format;
 	lower_is_better = true;
 	state = null;
 	components = {};
 
-	constructor() {  }
+	constructor() { super(); }
 	static fromJSON(json)
 	{
 		let lb = new Leaderboard();
@@ -177,13 +190,15 @@ class Leaderboard
 	}
 
 	#usesFastWords()
-	{ return FAST_WORDS.some(x => this.desc.toLowerCase().includes(x) || this.title.toLowerCase().includes(x)); }
+	{
+		const FAST_WORDS = ["fast", "quick", "speed", "rush", "hurry", "rapid"];
+		return FAST_WORDS.some(x => this.desc.toLowerCase().includes(x) || this.title.toLowerCase().includes(x));
+	}
 
-	isTime() { return this.format.category == "time" || this.#usesFastWords(); }
 	getType()
 	{
 		if (this.#usesFastWords()) return "speedrun";
-		if (this.isTime()) return this.lower_is_better ? "speedrun" : "survival";
+		if (this.format.category == "time") return this.lower_is_better ? "speedrun" : "survival";
 		return this.lower_is_better ? "min score" : "high score";
 	}
 }
@@ -194,30 +209,41 @@ class AchievementSet
 	title = null;
 	icon = null;
 	console = null;
-	achievements = [];
-	leaderboards = [];
+	achievements = new Map();
+	leaderboards = new Map();
 
 	constructor() {  }
-	static fromJSON(json)
+	addJSON(json)
 	{
-		let achset = new AchievementSet();
-		achset.id = json.ID;
-		achset.title = json.Title;
-		achset.icon = json.ImageIconURL;
-		achset.console = json.ConsoleID in ConsoleMap ? ConsoleMap[json.ConsoleID] : null;
+		this.id = json.ID;
+		this.title = json.Title;
+		this.icon = json.ImageIconURL;
+		this.console = json.ConsoleID in ConsoleMap ? ConsoleMap[json.ConsoleID] : null;
 
-		achset.achievements = json.Achievements
-			.filter((x) => !x.Title.toUpperCase().includes('[VOID]'))
-			.map((x) => Achievement.fromJSON(x));
-		achset.leaderboards = json.Leaderboards
-			.filter((x) => !x.Hidden)
-			.filter((x) => !x.Title.toUpperCase().includes('[VOID]'))
-			.map((x) => Leaderboard.fromJSON(x));
+		for (const [i, x] of json.Achievements.entries())
+		{
+			if (x.Title.toUpperCase().includes('[VOID]')) continue;
+			let ach = Achievement.fromJSON(x);
+			ach.index = i; // to preserve order from json file
+			let achIdx = ach.id;
+			if (achIdx === 0) achIdx = ach.index;
+			this.achievements.set(achIdx, ach);
+		}
+
+		for (let [i, x] of json.Leaderboards.entries())
+		{
+			if (x.Hidden || x.Title.toUpperCase().includes('[VOID]')) continue;
+			let lb = Leaderboard.fromJSON(x);
+			lb.index = i; // to preserve order from json file
+			let lbIdx = lb.id;
+			if (lbIdx === 0) lbIdx = lb.index;
+			this.leaderboards.set(lbIdx, lb);
+		}
 		
-		return achset;
+		return this;
 	}
 
-	static fromLocal(txt)
+	addLocal(txt, notes)
 	{
 		function parseColons(line)
 		{
@@ -248,30 +274,39 @@ class AchievementSet
 		}
 
 		const lines = txt.match(/[^\r\n]+/g);
-		let achset = new AchievementSet();
-		achset.title = lines[1];
+		this.title = lines[1];
 		for (let i = 2; i < lines.length; i++)
 		{
 			const row = parseColons(lines[i]);
 			let asset;
 			switch (row[0][0])
 			{
-				case 'N': // TODO: this is a local code note
+				case 'N': // local code note
+					notes.push(new CodeNote(row[1], row[2], null))
 					break;
 				case 'L': // leaderboard
 					asset = Leaderboard.fromLocal(row);
-					if (!asset.title.toUpperCase().includes('[VOID]'))
-						achset.leaderboards.push(asset);
+					asset.index = i + 1000000; // preserve order from file
+					if (asset.title.toUpperCase().includes('[VOID]')) continue;
+					let lbIdx = asset.id;
+					if (lbIdx === 0) lbIdx = asset.index;
+					this.leaderboards.set(lbIdx, asset);
 					break;
 				default: // achievement
 					asset = Achievement.fromLocal(row);
-					if (!asset.title.toUpperCase().includes('[VOID]'))
-						achset.achievements.push(asset);
+					asset.index = i + 1000000; // preserve order from file
+					if (asset.title.toUpperCase().includes('[VOID]')) continue;
+					let achIdx = asset.id;
+					if (achIdx === 0) achIdx = asset.index;
+					this.achievements.set(achIdx, asset);
 					break;
 			}
 		}
-		return achset;
+		return this;
 	}
+
+	getAchievements() { return [...this.achievements.values()]; }
+	getLeaderboards() { return [...this.leaderboards.values()]; }
 }
 
 class CodeNote
@@ -281,6 +316,8 @@ class CodeNote
 	type = null; // null means unknown, otherwise MemSize object
 	note = "";
 	author = "";
+	enum = null;
+
 	constructor(addr, note, author)
 	{
 		this.addr = +addr;
@@ -288,13 +325,30 @@ class CodeNote
 		this.author = author;
 
 		[this.type, this.size] = CodeNote.getSize(note);
+		if (!this.isProbablePointer())
+			this.enum = CodeNote.parseEnumerations(note);
 	}
+
+	toRefString() { return `note-${this.addr}`; }
 
 	isArray() { return this.size >= (this.type ? this.type.bytes : 1) * 2; }
 
 	contains(addr)
 	{
 		return addr >= this.addr && addr < this.addr + this.size;
+	}
+
+	isProbablePointer()
+	{
+		const lines = this.note.toLowerCase().split('\n');
+
+		// if the first line includes 'ptr' or 'pointer'
+		if (['ptr', 'pointer'].some(x => lines[0].includes(x))) return true;
+
+		// if 2 or more lines after the first line start with a "+"
+		if (lines.filter((x, i) => i > 0 && x.trim().startsWith('+')).length >= 2) return true;
+
+		return false;
 	}
 
 	// transliterated closely from CodeNoteModel::ExtractSize for maximum compatability
@@ -452,6 +506,14 @@ class CodeNote
 						memSize = MemSize.DBL32_BE;
 				}
 			}
+			else if (word.startsWith('bitflag') || word.startsWith('bitfield'))
+			{
+				if (!foundSize)
+				{
+					memSize = MemSize.BYTE;
+					wordIsSize = true;
+				}
+			}
 
 			if (word != ' ' && word != '-')
 			{
@@ -462,6 +524,49 @@ class CodeNote
 		}
 
 		return [memSize, bytes];
+	}
+
+	static parseEnumerations(note)
+	{
+		const ENUMERATION_RE = /((?:(?:0x)?[0-9a-f]+)+)([^\w\d]*[^\w\d\s][^\w\d]*).+$/i;
+
+		const lines = note.split('\n');
+		let delim_count = new Map();
+		for (let i = 1; i < lines.length; i++)
+		{
+			const m = lines[i].trim().match(ENUMERATION_RE);
+			if (m == null) continue;
+			delim_count.set(m[2], (delim_count.get(m[2]) ?? 0) + 1);
+		}
+
+		if (delim_count.size == 0) return null;
+		let [delim, dcount] = [...delim_count.entries()].sort(([a, av], [b, bv]) => bv - av)[0];
+
+		let enumerations = [];
+		let isHex = false;
+		let linecount = 0;
+		for (let i = 1; i < lines.length; i++)
+		{
+			if (!lines[i].includes(delim)) continue;
+			linecount++;
+
+			let [lhs, ...rhs] = lines[i].split(delim);
+			rhs = rhs.join(delim).trim();
+
+			for (const m of lhs.matchAll(/\b(0x)?([0-9a-f]+)\b/gi))
+			{
+				enumerations.push({literal: m[0], meaning: rhs});
+				isHex ||= m[1] || m[0].match(/[a-f]/i);
+			}
+		}
+
+		// there just doesn't seem to be enough to go on here
+		if (dcount == 1 || linecount < 3) return null;
+
+		for (let e of enumerations)
+			e.value = Number.parseInt(e.literal, isHex ? 16 : 10);
+		enumerations = enumerations.filter(x => !Number.isNaN(x));
+		return enumerations.length ? enumerations : null;
 	}
 }
 
@@ -657,7 +762,9 @@ class RichPresence
 			{ // display must be last, so no need to parse other line starts
 				if (line.startsWith('?'))
 				{
-					let parts = line.split('?');
+					let parts = line.match(/^\?(.+?)\?(.*)$/);
+					if (parts == null)
+						throw new LogicParseError('rich presence (malformed conditional display)', line);
 					richp.display.push({
 						condition: Logic.fromString(parts[1], false),
 						string: parts[2],

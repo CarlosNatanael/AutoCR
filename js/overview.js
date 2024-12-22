@@ -53,14 +53,25 @@ function clearSelected()
 		e.classList.remove('selected');
 }
 
+function scrollTo(elem) { elem.scrollIntoView({behavior: 'smooth', block: 'nearest'}); }
+
+function selectTab(tab)
+{
+	const ASSETLIST = document.getElementById('asset-list');
+	for (let x of ASSETLIST.getElementsByClassName('selected'))
+		x.classList.remove('selected');
+	tab.classList.add('selected');
+
+	scrollTo(tab);
+	document.getElementById('asset-info').scrollTop = 0;
+}
+
 var current = { id: -1, };
 function reset_loaded()
 {
-	current.set = null;
-	current.local = null;
+	current.set = new AchievementSet();
 	current.notes = [];
 	current.rp = null;
-	current.assessment = {};
 	clearSelected();
 }
 
@@ -164,7 +175,7 @@ function load_files(fileList)
 	for (const file of fileList)
 	{
 		let idregex = file.name.match(/^(\d+)/);
-		let thisid = +idregex[1] || -1;
+		let thisid = +idregex[1] ?? -1;
 		if (thisid != current.id)
 		{
 			current.id = thisid;
@@ -237,38 +248,15 @@ function load_files(fileList)
 	}
 }
 
-function select_row(row)
-{
-}
-
 function get_game_title()
 {
-	if (current.set  ) return current.set.title;
-	if (current.local) return current.local.title;
+	if (current.set) return current.set.title;
 	return null;
 }
 
-function all_achievements()
+function get_note_text(addr)
 {
-	let res = [];
-	if (current.set  ) res = res.concat(current.set.achievements);
-	if (current.local) res = res.concat(current.local.achievements);
-	return res;
-}
-
-function all_leaderboards()
-{
-	let res = [];
-	if (current.set  ) res = res.concat(current.set.leaderboards);
-	if (current.local) res = res.concat(current.local.leaderboards);
-	return res;
-}
-
-function get_note(v)
-{
-	let addr = v, note = null;
-	for (const cn of current.notes || [])
-		if (cn.contains(addr)) note = cn;
+	let note = get_note(addr, current.notes);
 	if (!note) return null;
 
 	let note_text = "";
@@ -283,7 +271,7 @@ function get_note(v)
 	return note_text;
 }
 
-async function copyToClipboard(text)
+async function copy_to_clipboard(text)
 {
 	try {
 		await navigator.clipboard.writeText(text);
@@ -292,9 +280,13 @@ async function copyToClipboard(text)
 	}
 }
 
+function jump_to_asset(asset)
+{ document.getElementById('asset-list').getElementsByClassName(asset?.toRefString?.()).item(0)?.click(); }
+
 function LogicTable({logic, issues = []})
 {
 	const [isHex, setIsHex] = React.useState(false);
+	issues = [].concat(...issues);
 
 	const COLUMNS = 10;
 	function OperandCells({operand, skipNote = false})
@@ -305,17 +297,18 @@ function LogicTable({logic, issues = []})
 			// if it has no type, skip
 			if (!operand.type) return operand.toString();
 			// if this is a memory read, add the code note, if possible
-			else if (operand.type.addr && !skipNote)
+			else if (operand.type.addr)
 			{
-				const note = get_note(operand.value);
-				if (note) return (
+				const note_text = get_note_text(operand.value);
+				if (!skipNote && note_text) return (
 					<span className="tooltip">
 						{operand.toValueString()}
 						<span className="tooltip-info">
-							<pre>{note}</pre>
+							<pre>{note_text}</pre>
 						</span>
 					</span>
 				);
+				else return operand.toValueString();
 			}
 			// if it is a value, integers need both representations
 			else if (Number.isInteger(operand.value) && operand.type != ReqType.FLOAT)
@@ -359,7 +352,7 @@ function LogicTable({logic, issues = []})
 			{[...group.entries()].map(([ri, req]) => {
 				let match = [...issues.entries()].filter(([_, issue]) => issue.target == req);
 				let skipNote = ri > 0 && group[ri-1].flag && group[ri-1].flag == ReqFlag.ADDADDRESS;
-				return (<tr key={`g${gi}-r${ri}`} className={match.length ? 'warn' : ''}>
+				return (<tr key={`g${gi}-r${ri}`} className={`${match.some(([_, issue]) => issue.type.severity >= FeedbackSeverity.WARN) ? 'warn ' : ''}${req.toRefString()}`}>
 					<td>{ri + 1} {match.map(([ndx, _]) => 
 						<React.Fragment key={ndx}>{' '} <sup key={ndx}>(#{ndx+1})</sup></React.Fragment>)}</td>
 					<td>{req.flag ? req.flag.name : ''}</td>
@@ -383,7 +376,7 @@ function LogicTable({logic, issues = []})
 		<button className="float-right" onClick={() => setIsHex(!isHex)}>
 			Toggle Hex Values
 		</button>
-		<button className="float-right" onClick={() => copyToClipboard(logic.toMarkdown())}>
+		<button className="float-right" onClick={() => copy_to_clipboard(logic.toMarkdown())}>
 			Copy Markdown
 		</button>
 	</div>);
@@ -434,7 +427,7 @@ function LogicStats({logic, stats = {}})
 			<li>Max Requirements Per Group: {stats.group_maxsize}</li>
 			<li><span title="A sequence of requirements linked by flags">Longest Chain</span>: {stats.max_chain}</li>
 		</ul>
-		<li>Addresses: {stats.virtual_addresses.size} {logic && logic.value ? '' : (stats.addresses.size <= 1 ? '☠️' : (stats.oca ? '⚠️' : ''))}</li>
+		<li><span title="Number of unique lookups, including lookups with AddAddress">Memory Lookup Count</span>: {stats.memlookups.size} {logic && logic.value ? '' : (stats.addresses.size <= 1 ? '(definite OCA)' : (stats.memlookups.size <= 1 ? '(possible OCA)' : ''))}</li>
 		<li>Logic Features</li>
 		<ul>
 			<li>{stats.deltas} <code>Delta</code>s, {stats.priors} <code>Prior</code>s</li>
@@ -451,10 +444,15 @@ function LogicStats({logic, stats = {}})
 function IssueList({issues = []})
 {
 	if (issues.length == 0) return null;
-	return (<ul>{issues.map(([ndx, issue]) => (
-		<li key={ndx}>
-			<sup>(#{ndx+1})</sup> {issue.type.desc}
-			{issue.type.ref.map(ref => [' ', <sup key={ref}>[<a href={ref}>ref</a>]</sup>])}
+	return (<ul>{issues.map((issue, i) => (
+		<li key={i}>
+			<sup>(<a href="#" onClick={() => {
+				let ctarget = typeof issue.target == 'string' ? `asset-${issue.target}` : issue.target?.toRefString();
+				if (ctarget) scrollTo(document.getElementsByClassName(ctarget).item(0));
+			}}>#{i+1}</a>)</sup> {issue.type.desc}
+			{issue.type.ref.map((ref, i) => <React.Fragment key={i}>
+				<sup key={ref}>[<a href={ref}>ref</a>]</sup>
+			</React.Fragment>)}
 			{issue.detail}
 		</li>
 	))}</ul>);
@@ -463,51 +461,71 @@ function IssueList({issues = []})
 function SubFeedback({issues = [], label=""})
 {
 	if (issues.length == 0) return null;
-	return [ 
-		<h2 key={'header'}>{label}</h2>,
-		<IssueList key={'issues'} issues={issues} />,
-	];
+	return (<>
+		<h2>{label}</h2>
+		<IssueList issues={issues} />
+	</>);
 }
 
 function AssetFeedback({issues = []})
 {
-	if (issues.length == 0) return null;
-	const PRESENTATION = ['title', 'desc', 'art', 'presentation'];
+	if (!issues.some(x => x.length > 0)) return null;
 	return (<div className="feedback">
 		<h1>Feedback</h1>
-		<SubFeedback
-			label="Presentation & Writing"
-			issues={[...issues.entries()].filter(([_, x]) => PRESENTATION.includes(x.target))}
-		/>
-		<SubFeedback
-			label="Logic & Design"
-			issues={[...issues.entries()].filter(([_, x]) => !PRESENTATION.includes(x.target))}
-		/>
+		{issues.map((group, i) => (
+			<SubFeedback key={i}
+				label={group.label}
+				issues={group}
+			/>
+		))}
 	</div>);
 }
 
 function SetBadge({href = null})
 {
 	return (<a href={href ? href : `https://retroachievements.org/game/${current.id}`}>
-		<img className="icon" src={current.set && current.set.icon ? current.set.icon : "https://media.retroachievements.org/Images/000001.png"} />
+		<img className="icon float-left" src={current.set && current.set.icon ? current.set.icon : "https://media.retroachievements.org/Images/000001.png"} />
 	</a>);
 }
 
 function AchievementBadge({ach})
 {
 	return (<a href={`https://retroachievements.org/achievement/${ach.id}`}>
-		<img className="icon" src={ach.badge ? ach.badge : "https://media.retroachievements.org/Images/000001.png"} />
+		<img className="icon float-left" src={ach.badge ? ach.badge : "https://media.retroachievements.org/Images/000001.png"} />
 	</a>);
+}
+
+function AchievementCard({ach, warn})
+{
+	let icon = null;
+	if (ach.achtype == 'progression')   icon = <span title="progression">✅</span>;
+	if (ach.achtype == 'win_condition') icon = <span title="win_condition">🏅</span>;
+	if (ach.achtype == 'missable')      icon = <span title="missable">⚠️</span>;
+
+	return (<div className={"asset-card" + (warn ? " warning" : "")} onClick={() => { jump_to_asset(ach); }}>
+		<div>
+			<img className="icon" src={ach.badge ? ach.badge : "https://media.retroachievements.org/Images/000001.png"} />
+		</div>
+		<div>
+			<p>🏆 <strong>{ach.title}</strong> ({ach.points}) {icon}</p>
+			<p><em>{ach.desc}</em></p>
+		</div>
+	</div>);
 }
 
 function AchievementInfo({ach})
 {
-	let feedback = current.assessment.achievements.get(ach.id);
-	let feedback_targets = new Set(feedback.issues.map(x => x.target));
+	let feedback = ach.feedback;
+	let feedback_targets = new Set([].concat(...feedback.issues).map(x => x.target));
 
 	return (<>
 		<div className="main-header">
 			<AchievementBadge ach={ach} />
+			<div>
+				<button className="float-right" onClick={() => copy_to_clipboard(`[${ach.title}](https://retroachievements.org/achievement/${ach.id})`)}>
+					Copy Markdown Link
+				</button>
+			</div>
 			<h2 className="asset-title">
 				🏆 <span className={`${feedback_targets.has("title") ? 'warn' : ''}`}>{ach.title}</span> ({ach.points})
 			</h2>
@@ -531,8 +549,8 @@ function AchievementInfo({ach})
 
 function LeaderboardInfo({lb})
 {
-	let feedback = current.assessment.leaderboards.get(lb.id);
-	let feedback_targets = new Set(feedback.issues.map(x => x.target));
+	let feedback = lb.feedback;
+	let feedback_targets = new Set([].concat(...feedback.issues).map(x => x.target));
 
 	const COMPONENTS = ["START", "CANCEL", "SUBMIT", "VALUE"];
 	function LeaderboardComponentStats()
@@ -580,6 +598,11 @@ function LeaderboardInfo({lb})
 		</div>
 		<div className="stats">
 			<h1>Statistics</h1>
+			<ul>
+				<li>Format: <code>{lb.format.type}</code> ({lb.format.name})</li>
+				<li>Lower is better? {lb.lower_is_better ? 'Yes' : 'No'}</li>
+				<li>Inferred Type: <code>{lb.getType()}</code></li>
+			</ul>
 			<LeaderboardComponentStats />
 		</div>
 		<AssetFeedback issues={feedback.issues} />
@@ -595,8 +618,8 @@ function ChartCanvas({ setup })
 
 function AchievementSetOverview()
 {
-	const feedback = current.assessment.set;
-	const feedback_targets = new Set(feedback.issues.map(x => x.target));
+	const feedback = current.set.feedback;
+	const feedback_targets = new Set([].concat(...feedback.issues).map(x => x.target));
 	const stats = feedback.stats;
 
 	function AverageFeedback()
@@ -612,29 +635,33 @@ function AchievementSetOverview()
 	function CodeNotesInfo()
 	{
 		if (current.notes.length == 0) return null;
-		let notestats = current.assessment.notes.stats;
-		let setstats = current.assessment.set.stats;
+		let notestats = current.notes.feedback.stats;
+		let setstats = current.set.feedback.stats;
 		return (<>
 			<li>Code Notes:</li>
 			<ul>
-				<li>Missing code notes: {setstats.missing_notes.size}</li>
-				<ul>
-					{[...setstats.missing_notes.entries()].sort(([a, _1], [b, _2]) => a - b)
-						.map(([addr, loc]) => <React.Fragment key={addr}>
-							<li><code>{toDisplayHex(addr)}</code></li>
-							<ul>
-								{loc.map((x, i) => <li key={i}>used in {x}</li>)}
-							</ul>
-						</React.Fragment>)}
-				</ul>
+				<li>
+					<details>
+						<summary>Missing code notes: {setstats.missing_notes.size} (click to expand)</summary>
+						<ul>
+							{[...setstats.missing_notes.entries()].sort(([a, _1], [b, _2]) => a - b)
+								.map(([addr, loc]) => <React.Fragment key={addr}>
+									<li><code>{toDisplayHex(addr)}</code></li>
+									<ul>
+										{loc.map((x, i) => <li key={i}>used in {x}</li>)}
+									</ul>
+								</React.Fragment>)}
+						</ul>
+					</details>
+				</li>
 			</ul>
 		</>);
 	}
 
 	function RichPresenceInfo()
 	{
-		if (!current.rp || !current.assessment.rp) return null;
-		const stats = current.assessment.rp.stats;
+		if (!current.rp || !current.rp.feedback) return null;
+		const stats = current.rp.feedback.stats;
 		return (<>
 			<li>Rich Presence:</li>
 			<ul>
@@ -654,8 +681,8 @@ function AchievementSetOverview()
 		return (<>{x} ({Math.round(100 * x / stats.achievement_count)}%)</>)
 	}
 
-	const achievements = all_achievements();
-	const leaderboards = all_leaderboards();
+	const achievements = current.set.getAchievements();
+	const leaderboards = current.set.getLeaderboards();
 
 	let set_contents = [
 		[achievements.length, 'achievement'],
@@ -718,14 +745,13 @@ function AchievementSetOverview()
 					<li>Leaderboards with complex/conditional value: {stats.lb_conditional_value}</li>
 				</ul>
 
-				<CodeNotesInfo />
 				<RichPresenceInfo />
 
 				<li>Proficiencies</li>
 				<ul>
 					<li>Flags used ({stats.all_flags.size}): <KeywordList list={[...stats.all_flags].map(x => x.name)} /></li>
 					<ul>
-						{[...stats.all_flags].sort().map(k => <li key={k.name}><code>{k.name}</code> used in {stats.using_flag.get(k)} achievements</li>)}
+						{[...stats.all_flags].sort().map(k => <li key={k.name}><code>{k.name}</code> used in {stats.using_flag.get(k).size} achievements</li>)}
 						<li>Unused flags: <KeywordList list={[...new Set(Object.values(ReqFlag)).difference(stats.all_flags)].map(x => x.name)} /></li>
 					</ul>
 					<li>Comparisons used ({stats.all_cmps.size}): <KeywordList list={[...stats.all_cmps]} /></li>
@@ -740,10 +766,231 @@ function AchievementSetOverview()
 						<li>Achievements using <span title="PauseIf with a hitcount">PauseLocks</span>: {stats.using_pauselock.length} ({stats.using_pauselock_alt_reset.length} with Alt reset)</li>
 					</ul>
 				</ul>
+
+				<CodeNotesInfo />
 			</ul>
 		</div>
 		<AssetFeedback issues={feedback.issues} />
 	</>);
+}
+
+function CodeReviewOverview()
+{
+	const feedback = current.set.feedback;
+	const stats = feedback.stats;
+
+	const achievements = current.set.getAchievements();
+	const leaderboards = current.set.getLeaderboards();
+
+	let set_contents = [
+		[achievements.length, 'achievement'],
+		[leaderboards.length, 'leaderboard'],
+	];
+
+	function AchievementCardList({achs, label, warn = []})
+	{
+		let body = achs.map(ach => (
+			<AchievementCard key={ach.id} ach={ach} 
+				warn={ach.feedback.issues.some(g => g.some(issue => warn.includes(issue.type) && issue.type.severity > FeedbackSeverity.PASS))}
+			/>
+		));
+
+		return (<li><details>
+			<summary>{label}: {achs.length} asset{achs.length == 1 ? "" : "s"}</summary>
+			<ul>{body}</ul>
+		</details></li>);
+	}
+
+	function AchievementsByFlag({flag, warn = []})
+	{
+		return (
+			<AchievementCardList
+				achs={[...stats.using_flag.get(flag)]}
+				label={<><code>{flag.name}</code></>}
+				warn={warn}
+			/>
+		);
+	}
+
+	return (<>
+		<div className="main-header">
+			<div className="float-right">
+				<ConsoleIcon />
+			</div>
+			<SetBadge />
+			<h1 className="asset-title">
+				{get_game_title()}
+			</h1>
+			<p>
+				Set contains {set_contents.filter(([c, _]) => c).map(([c, t]) => `${c} ${t}${c == 1 ? '' : 's'}`).join(' and ')}
+			</p>
+		</div>
+		<div>
+			<h1>Basic Toolkit</h1>
+			<ul>
+				<li>Comparison Operators used: ({stats.all_cmps.size}): <KeywordList list={[...stats.all_cmps]} /></li>
+				<ul>
+					<AchievementCardList
+						achs={achievements.filter(ach => ach.feedback.stats.unique_cmps.size > 1 || !ach.feedback.stats.unique_cmps.has('='))}
+						label={<>Using non-equality comparators</>}
+					/>
+				</ul>
+				<li>Memory Sizes used ({stats.all_sizes.size}): <KeywordList list={[...stats.all_sizes].map(x => x.name)} /></li>
+				<ul>
+					<AchievementCardList
+						achs={achievements.filter(ach => ach.feedback.stats.unique_sizes.size > 1 || !ach.feedback.stats.unique_cmps.has(MemSize.BYTE))}
+						label={<>Using sizes other than <code>8-bit</code></>}
+						warn={[Feedback.TYPE_MISMATCH, ]}
+					/>
+					<AchievementCardList
+						achs={stats.using_bit_ops}
+						label={<>Using bit operations (<code>BitX</code> or <code>BitCount</code>)</>}
+					/>
+				</ul>
+				<li><code>Mem</code> & <code>Delta</code> Usage</li>
+				<ul>
+					<AchievementCardList
+						achs={achievements.filter(ach => ach.feedback.issues.some(g => g.some(x => x.type == Feedback.MISSING_DELTA)))} 
+						label={<>Lacking <code>Delta</code></>}
+					/>
+					<AchievementCardList
+						achs={achievements.filter(ach => ach.feedback.issues.some(g => g.some(x => x.type == Feedback.IMPROPER_DELTA)))}
+						label={<>Using <code>Delta</code> improperly or insufficiently</>}
+					/>
+				</ul>
+				<AchievementCardList
+					achs={stats.using_alt_groups}
+					label={<>Using Alt groups</>}
+					warn={[Feedback.COMMON_ALT, Feedback.USELESS_ALT, ]}
+				/>
+				<li>Hitcounts</li>
+				<ul>
+					<AchievementCardList
+						achs={stats.using_checkpoint_hits}
+						label={<>Using Checkpoint hits</>}
+						warn={[Feedback.HIT_NO_RESET, Feedback.RESET_HITCOUNT_1, ]}
+					/>
+					<AchievementCardList
+						achs={stats.using_hitcounts}
+						label={<>Using hitcounts (<code>&gt;1</code>)</>}
+						warn={[Feedback.HIT_NO_RESET, ]}
+					/>
+				</ul>
+				<li>Specific Flags</li>
+				<ul>
+					<AchievementsByFlag
+						flag={ReqFlag.RESETIF}
+						warn={[Feedback.PAUSELOCK_NO_RESET, Feedback.HIT_NO_RESET, Feedback.UUO_RESET, Feedback.RESET_HITCOUNT_1, ]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.PAUSEIF}
+						warn={[Feedback.PAUSELOCK_NO_RESET, Feedback.UUO_PAUSE, Feedback.PAUSING_MEASURED, ]}
+					/>
+				</ul>
+			</ul>
+			<h1>Intermediate Toolkit</h1>
+			<ul>
+				<AchievementCardList
+					achs={achievements.filter(ach => ach.feedback.stats.priors > 0)}
+					label={<>Using <code>Prior</code></>}
+					warn={[Feedback.BAD_PRIOR, ]}
+				/>
+				<li>Specific Flags</li>
+				<ul>
+					<AchievementsByFlag
+						flag={ReqFlag.ANDNEXT}
+						warn={[Feedback.USELESS_ANDNEXT, ]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.ADDHITS}
+						warn={[Feedback.HIT_NO_RESET, ]}
+					/>
+				</ul>
+			</ul>
+			<h1>Advanced Toolkit</h1>
+			<ul>
+				<li>PauseLocks</li>
+				<ul>
+					<AchievementCardList
+						achs={stats.using_pauselock}
+						label={<>PauseLocks</>}
+						warn={[Feedback.PAUSELOCK_NO_RESET, ]}
+					/>
+					<AchievementCardList
+						achs={stats.using_pauselock_alt_reset}
+						label={<>PauseLocks (with Alt resets)</>}
+						warn={[Feedback.PAUSELOCK_NO_RESET, ]}
+					/>
+				</ul>
+				<AchievementCardList
+					achs={achievements.filter(ach => ach.feedback.stats.mem_del > 0)}
+					label={<>Using a <code>Mem</code> &ne; <code>Delta</code> counter</>}
+					warn={[]}
+				/>
+				<li>Specific Flags</li>
+				<ul>
+					<AchievementsByFlag
+						flag={ReqFlag.RESETNEXTIF}
+						warn={[Feedback.PAUSELOCK_NO_RESET, Feedback.HIT_NO_RESET, Feedback.UUO_RNI, ]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.SUBHITS}
+						warn={[Feedback.HIT_NO_RESET, ]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.ADDADDRESS}
+						warn={[Feedback.STALE_ADDADDRESS, ]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.ADDSOURCE}
+						warn={[]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.SUBSOURCE}
+						warn={[]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.MEASURED}
+						warn={[Feedback.PAUSING_MEASURED, ]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.MEASUREDP}
+						warn={[Feedback.PAUSING_MEASURED, ]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.MEASUREDIF}
+						warn={[]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.TRIGGER}
+						warn={[]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.ORNEXT}
+						warn={[]}
+					/>
+				</ul>
+				<AchievementCardList
+					achs={achievements.filter(ach => [...ach.feedback.stats.source_modification.values()].some(x => x > 0))}
+					label={<>Using source modification</>}
+					warn={[]}
+				/>
+			</ul>
+			<h1>Other Details</h1>
+			<ul>
+				<AchievementCardList
+					achs={achievements.filter(ach => ach.points == 25)}
+					label={<>Achievements worth 25 points</>}
+					warn={[]}
+				/>
+				<AchievementCardList
+					achs={achievements.filter(ach => ach.points > 25)}
+					label={<>Achievements worth &gt;25 points</>}
+					warn={[]}
+				/>
+			</ul>
+		</div>
+	</>)
 }
 
 function CodeNotesTable({notes = [], issues = []})
@@ -751,6 +998,7 @@ function CodeNotesTable({notes = [], issues = []})
 	function toDisplayHex(addr)
 	{ return '0x' + addr.toString(16).padStart(8, '0'); }
 
+	issues = [].concat(...issues);
 	return (<div className="data-table">
 		<table className="code-notes">
 			<thead>
@@ -764,20 +1012,21 @@ function CodeNotesTable({notes = [], issues = []})
 				</tr>
 			</thead>
 			<tbody>
-				{notes.map(note => <tr key={note.addr} className={issues.some(x => x.target == note) ? 'warn' : ''}>
-					<td>{toDisplayHex(note.addr)}{note.isArray() ? (<><br/>&#x2010;&nbsp;{toDisplayHex(note.addr + note.size - 1)}</>) : <></>}</td>
-					<td><pre>{note.note}</pre></td>
-					<td>
-						<span className="tooltip">
-							<a href={`https://retroachievements.org/user/${note.author}`}>
-								<img src={`https://media.retroachievements.org/UserPic/${note.author}.png`} width="24" height="24" />
-							</a>
-							<span className="tooltip-info">
-								{note.author}
+				{notes.map(note => (
+					<tr key={note.addr} className={`${issues.some(x => x.target == note) ? 'warn ' : ''}${note.toRefString()}`}>
+						<td>{toDisplayHex(note.addr)}{note.isArray() ? (<><br/>&#x2010;&nbsp;{toDisplayHex(note.addr + note.size - 1)}</>) : <></>}</td>
+						<td><pre>{note.note}</pre></td>
+						<td>
+							<span className="tooltip">
+								<a href={`https://retroachievements.org/user/${note.author}`}>
+									<img src={`https://media.retroachievements.org/UserPic/${note.author}.png`} width="24" height="24" />
+								</a>
+								<span className="tooltip-info">
+									{note.author}
+								</span>
 							</span>
-						</span>
-					</td>
-				</tr>)}
+						</td>
+					</tr>))}
 			</tbody>
 		</table>
 	</div>)
@@ -785,8 +1034,8 @@ function CodeNotesTable({notes = [], issues = []})
 
 function CodeNotesOverview()
 {
-	const feedback = current.assessment.notes;
-	const feedback_targets = new Set(feedback.issues.map(x => x.target));
+	const feedback = current.notes.feedback;
+	const feedback_targets = new Set([].concat(...feedback.issues).map(x => x.target));
 	const stats = feedback.stats;
 
 	let authors = new Set(current.notes.map(note => note.author));
@@ -825,6 +1074,20 @@ function CodeNotesOverview()
 			</ul>
 		</div>
 
+		<button className='float-right' onClick={() => {
+			let delnotes = `1.0.0.0\n${get_game_title()}\n`;
+			for (const note of displaynotes)
+				delnotes += `N0:${toDisplayHex(note.addr)}:""\n`;
+
+			let e = document.createElement('a');
+			e.setAttribute('href', 'data:text/plaincharset=utf-8,' + encodeURIComponent(delnotes));
+			e.setAttribute('download', `${current.id}-User.txt`);
+
+			e.style.display = 'none';
+			document.body.appendChild(e);
+			e.click();
+			document.body.removeChild(e);
+		}}>Quick Delete</button>
 		<CodeNotesTable notes={displaynotes} issues={displayissues} />
 
 		<div className="stats">
@@ -892,12 +1155,12 @@ function HighlightedRichPresence({script, update = null})
 	let rptext = script.split(/\r\n|(?!\r\n)[\n-\r\x85\u2028\u2029]/g).map(line => {
 		line = line.trim();
 		if (display) line = line.startsWith('?')
-			? line.replaceAll(/\?(.+)\?(.+)/g, (_, p1, p2) => `?<span class="condition logic">${p1}</span>?${addLookups(p2)}`)
+			? line.replaceAll(/\?(.+)\?(.*)/g, (_, p1, p2) => `?<span class="condition logic">${p1}</span>?${addLookups(p2)}`)
 			: addLookups(line);
 		if (line.startsWith('Display:')) display = true;
 		return line;
 	}).join('\n');
-	rptext = rptext.replaceAll(/((Lookup|Format|Display):(.+))/g, '<span class="header" id="def-$3">$1</span>');
+	rptext = rptext.replaceAll(/((Lookup|Format|Display):([a-zA-Z0-9_ ]+))/g, '<span class="header" id="def-$3">$1</span>');
 
 	return (<div className="rich-presence clear">
 		<pre><code ref={ref} dangerouslySetInnerHTML={{__html: rptext}}></code></pre>
@@ -906,8 +1169,8 @@ function HighlightedRichPresence({script, update = null})
 
 function RichPresenceOverview()
 {
-	const feedback = current.assessment.rp;
-	const feedback_targets = new Set(feedback.issues.map(x => x.target));
+	const feedback = current.rp.feedback;
+	const feedback_targets = new Set([].concat(...feedback.issues).map(x => x.target));
 	const stats = feedback.stats;
 
 	const logictbl = React.useRef();
@@ -973,12 +1236,21 @@ function UnloadTab()
 const SEVERITY_TO_CLASS = ['pass', 'warn', 'fail', 'fail'];
 function SetOverviewTab()
 {
-	if (current.set == null && current.local == null) return null;
-	let warn = current.assessment && current.assessment.set ?
-		SEVERITY_TO_CLASS[current.assessment.set.status()] : '';
-	return (<tr className={`asset-row ${warn}`} onClick={(e) => show_overview(e, <AchievementSetOverview />)}>
+	if (current.set == null) return null;
+	let warn = SEVERITY_TO_CLASS[current.set.feedback.status()];
+	return (<tr className={`asset-row asset-set-overview ${warn}`} onClick={(e) => show_overview(e, <AchievementSetOverview />)}>
 		<td className="asset-name">
-			🔍 Set Overview
+			🗺️ Set Overview
+		</td>
+	</tr>);
+}
+
+function CodeReviewTab()
+{
+	if (current.set == null) return null;
+	return (<tr className={`asset-row asset-code-review`} onClick={(e) => show_overview(e, <CodeReviewOverview />)}>
+		<td className="asset-name">
+			🔍 Detailed Set Breakdown
 		</td>
 	</tr>);
 }
@@ -986,9 +1258,8 @@ function SetOverviewTab()
 function CodeNotesTab()
 {
 	if (current.notes.length == 0) return null;
-	let warn = current.assessment && current.assessment.notes ? 
-		SEVERITY_TO_CLASS[current.assessment.notes.status()] : '';
-	return (<tr className={`asset-row ${warn}`} onClick={(e) => show_overview(e, <CodeNotesOverview />)}>
+	let warn = SEVERITY_TO_CLASS[current.notes.feedback.status()];
+	return (<tr className={`asset-row asset-code-notes ${warn}`} onClick={(e) => show_overview(e, <CodeNotesOverview />)}>
 		<td className="asset-name">
 			📝 Code Notes
 		</td>
@@ -998,9 +1269,8 @@ function CodeNotesTab()
 function RichPresenceTab()
 {
 	if (!current.rp) return null;
-	let warn = current.assessment && current.assessment.rp ? 
-		SEVERITY_TO_CLASS[current.assessment.rp.status()] : '';
-	return (<tr className={`asset-row ${warn}`} onClick={(e) => show_overview(e, <RichPresenceOverview />)}>
+	let warn = SEVERITY_TO_CLASS[current.rp.feedback.status()];
+	return (<tr className={`asset-row asset-rich-presence ${warn}`} onClick={(e) => show_overview(e, <RichPresenceOverview />)}>
 		<td className="asset-name">
 			🎮 Rich Presence
 		</td>
@@ -1009,7 +1279,7 @@ function RichPresenceTab()
 
 function AchievementTabs()
 {
-	let achievements = all_achievements();
+	let achievements = current.set.getAchievements();
 	if (achievements.length == 0) return null;
 
 	// preload all images
@@ -1021,9 +1291,8 @@ function AchievementTabs()
 			<td>Achievements</td>
 		</tr>
 		{achievements.map((ach) => {
-			let warn = current.assessment.achievements && current.assessment.achievements.has(ach.id) ?
-				SEVERITY_TO_CLASS[current.assessment.achievements.get(ach.id).status()] : '';
-			return (<tr key={`a${ach.id}`} className={`asset-row ${warn}`} onClick={(e) => show_overview(e, <AchievementInfo ach={ach} />)}>
+			let warn = SEVERITY_TO_CLASS[ach.feedback.status()];
+			return (<tr key={`a${ach.id}`} className={`asset-row ${ach.toRefString()} ${warn}`} onClick={(e) => show_overview(e, <AchievementInfo ach={ach} />)}>
 				<td className="asset-name">
 					🏆 {ach.state.marker}{ach.title} ({ach.points})
 				</td>
@@ -1034,7 +1303,7 @@ function AchievementTabs()
 
 function LeaderboardTabs()
 {
-	let leaderboards = all_leaderboards();
+	let leaderboards = current.set.getLeaderboards();
 	if (leaderboards.length == 0) return null;
 
 	leaderboards = leaderboards.sort((a, b) => a.state.rank - b.state.rank);
@@ -1043,9 +1312,8 @@ function LeaderboardTabs()
 			<td>Leaderboards</td>
 		</tr>
 		{leaderboards.map((lb) => {
-			let warn = current.assessment.leaderboards && current.assessment.leaderboards.has(lb.id) ?
-				SEVERITY_TO_CLASS[current.assessment.leaderboards.get(lb.id).status()] : '';
-			return (<tr key={`b${lb.id}`} className={`asset-row ${warn}`} onClick={(e) => show_overview(e, <LeaderboardInfo lb={lb} />)}>
+			let warn = SEVERITY_TO_CLASS[lb.feedback.status()];
+			return (<tr key={`b${lb.id}`} className={`asset-row ${lb.toRefString()} ${warn}`} onClick={(e) => show_overview(e, <LeaderboardInfo lb={lb} />)}>
 				<td className="asset-name">
 					📊 {lb.state.marker}{lb.title}
 				</td>
@@ -1069,6 +1337,7 @@ function SidebarTabs()
 		<SetOverviewTab />
 		<CodeNotesTab />
 		<RichPresenceTab />
+		<CodeReviewTab />
 		<AchievementTabs />
 		<LeaderboardTabs />
 	</>);
@@ -1077,58 +1346,57 @@ function SidebarTabs()
 function show_overview(e, node)
 {
 	container.render(node);
-	clearSelected();
-	e.currentTarget.classList.add('selected');
-	e.currentTarget.scrollIntoView({behavior: 'smooth', block: 'nearest'});
-	document.getElementById('asset-info').scrollTop = 0;
+	selectTab(e.currentTarget);
 }
 
-function update_assessment()
+function update()
 {
-	current.assessment.achievements = new Map(all_achievements().map(x => [x.id, assess_achievement(x)]));
-	current.assessment.leaderboards = new Map(all_leaderboards().map(x => [x.id, assess_leaderboard(x)]));
-	current.assessment.notes = assess_code_notes(current.notes);
-	current.assessment.rp = assess_rich_presence(current.rp);
-	current.assessment.set = assess_set();
+	// assess all code notes
+	current.notes.sort((a, b) => a.addr - b.addr);
+	assess_code_notes(current.notes);
+
+	// ensure that every achievement and leaderboard has been assessed
+	// don't assume they have already been processed, as code notes might be new
+	for (let ach of current.set.getAchievements()) assess_achievement(ach);
+	for (let lb of current.set.getLeaderboards()) assess_leaderboard(lb);
+
+	// assess rich presence
+	assess_rich_presence(current.rp);
+
+	// set assessment relies on other assessments for some stats,
+	// so this should always be the last assessment
+	assess_set(current.set);
+
+	// re-render the sidebar with any newly-loaded assets
+	sidebar.render(<SidebarTabs />);
 }
 
 function load_achievement_set(json)
 {
-	current.set = AchievementSet.fromJSON(json);
+	current.set.addJSON(json);
 	if (json.RichPresencePatch)
 		load_rich_presence(json.RichPresencePatch, false);
-	update_assessment();
-	rebuild_sidebar();
+	update();
 }
 
 function load_user_file(txt)
 {
-	current.local = AchievementSet.fromLocal(txt);
-	current.local.id = current.id;
-	update_assessment();
-	rebuild_sidebar();
+	current.set.addLocal(txt, current.notes);
+	update();
 }
 
 function load_code_notes(json)
 {
-	current.notes = [];
 	for (const obj of json) if (obj.Note)
 		current.notes.push(new CodeNote(obj.Address, obj.Note, obj.User));
-	update_assessment();
-	rebuild_sidebar();
+	update();
 }
 
 function load_rich_presence(txt, from_file)
 {
 	if (!current.rp || from_file)
 		current.rp = RichPresence.fromText(txt);
-	update_assessment();
-	rebuild_sidebar();
-}
-
-function rebuild_sidebar()
-{
-	sidebar.render(<SidebarTabs />);
+	update();
 }
 
 load_file_cache();

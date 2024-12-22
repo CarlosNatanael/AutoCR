@@ -1,32 +1,38 @@
 const ReqType = Object.freeze({
-	MEM:    { name: "Mem",    prefix: "",         addr: true, },
-	DELTA:  { name: "Delta",  prefix: "d",        addr: true, },
-	PRIOR:  { name: "Prior",  prefix: "p",        addr: true, },
-	BCD:    { name: "BCD",    prefix: "b",        addr: true, },
-	INVERT: { name: "Invert", prefix: "~",        addr: true, },
+	MEM:    { name: "Mem",    prefix: "",         addr: true,  cprio: 10, },
+	DELTA:  { name: "Delta",  prefix: "d",        addr: true,  cprio: 11, },
+	PRIOR:  { name: "Prior",  prefix: "p",        addr: true,  cprio: 12, },
+	BCD:    { name: "BCD",    prefix: "b",        addr: true,  cprio: 13, },
+	INVERT: { name: "Invert", prefix: "~",        addr: true,  cprio: 14, },
 	
-	VALUE:  { name: "Value",  prefix: "v",        addr: false, },
-	FLOAT:  { name: "Float",  prefix: "f",        addr: false, },
-
-	RECALL: { name: "Recall", prefix: "{recall}", addr: false, },
+	RECALL: { name: "Recall", prefix: "{recall}", addr: false, cprio: 20, },
+	VALUE:  { name: "Value",  prefix: "v",        addr: false, cprio: 21, },
+	FLOAT:  { name: "Float",  prefix: "f",        addr: false, cprio: 22, },
 });
 
+/*
+	@property name: flag name
+	@property prefix: rcheevos syntax logic prefix
+	@property chain: (boolean) does the flag connect this requirement to the next one?
+	@property scalable: (boolean) can this requirement have a source modification?
+	@property cmod: (boolean) is this a combining modifier flag?
+*/
 const ReqFlag = Object.freeze({
-	PAUSEIF:     { name: "PauseIf",      prefix: "P:", chain: false, scalable: false, },
-	RESETIF:     { name: "ResetIf",      prefix: "R:", chain: false, scalable: false, },
-	RESETNEXTIF: { name: "ResetNextIf",  prefix: "Z:", chain: true,  scalable: false, },
-	ADDSOURCE:   { name: "AddSource",    prefix: "A:", chain: true,  scalable: true , },
-	SUBSOURCE:   { name: "SubSource",    prefix: "B:", chain: true,  scalable: true , },
-	ADDHITS:     { name: "AddHits",      prefix: "C:", chain: true,  scalable: false, },
-	SUBHITS:     { name: "SubHits",      prefix: "D:", chain: true,  scalable: false, },
-	ADDADDRESS:  { name: "AddAddress",   prefix: "I:", chain: true,  scalable: true , },
-	ANDNEXT:     { name: "AndNext",      prefix: "N:", chain: true,  scalable: false, },
-	ORNEXT:      { name: "OrNext",       prefix: "O:", chain: true,  scalable: false, },
-	MEASURED:    { name: "Measured",     prefix: "M:", chain: false, scalable: false, },
-	MEASUREDP:   { name: "Measured%",    prefix: "G:", chain: false, scalable: false, },
-	MEASUREDIF:  { name: "MeasuredIf",   prefix: "Q:", chain: false, scalable: false, },
-	TRIGGER:     { name: "Trigger",      prefix: "T:", chain: false, scalable: false, },
-	REMEMBER:    { name: "Remember",     prefix: "K:", chain: false, scalable: true , },
+	PAUSEIF:     { name: "PauseIf",      prefix: "P:", chain: false, scalable: false, cmod: false, },
+	RESETIF:     { name: "ResetIf",      prefix: "R:", chain: false, scalable: false, cmod: false, },
+	RESETNEXTIF: { name: "ResetNextIf",  prefix: "Z:", chain: true,  scalable: false, cmod: false, },
+	ADDSOURCE:   { name: "AddSource",    prefix: "A:", chain: true,  scalable: true , cmod: true , },
+	SUBSOURCE:   { name: "SubSource",    prefix: "B:", chain: true,  scalable: true , cmod: true , },
+	ADDHITS:     { name: "AddHits",      prefix: "C:", chain: true,  scalable: false, cmod: false, },
+	SUBHITS:     { name: "SubHits",      prefix: "D:", chain: true,  scalable: false, cmod: false, },
+	ADDADDRESS:  { name: "AddAddress",   prefix: "I:", chain: true,  scalable: true , cmod: true , },
+	ANDNEXT:     { name: "AndNext",      prefix: "N:", chain: true,  scalable: false, cmod: true , },
+	ORNEXT:      { name: "OrNext",       prefix: "O:", chain: true,  scalable: false, cmod: true , },
+	MEASURED:    { name: "Measured",     prefix: "M:", chain: false, scalable: false, cmod: false, },
+	MEASUREDP:   { name: "Measured%",    prefix: "G:", chain: false, scalable: false, cmod: false, },
+	MEASUREDIF:  { name: "MeasuredIf",   prefix: "Q:", chain: false, scalable: false, cmod: false, },
+	TRIGGER:     { name: "Trigger",      prefix: "T:", chain: false, scalable: false, cmod: false, },
+	REMEMBER:    { name: "Remember",     prefix: "K:", chain: false, scalable: true , cmod: false, },
 });
 
 const MemSize = Object.freeze({
@@ -92,7 +98,10 @@ const ReqFlagMap = Object.fromEntries(
 	Object.entries(ReqFlag).map(([k, v]) => [v.prefix, v])
 );
 const MemSizeMap = Object.fromEntries(
-	Object.entries(MemSize).map(([k, v]) => [v.prefix, v])
+	[].concat(
+		Object.entries(MemSize).map(([k, v]) => [v.prefix, v]),
+		Object.entries(MemSize).map(([k, v]) => [v.prefix.toLowerCase(), v])
+	)
 );
 const FormatTypeMap = Object.fromEntries(
 	Object.entries(FormatType).map(([k, v]) => [v.type, v])
@@ -110,6 +119,20 @@ const BitProficiency = new Set([
 	MemSize.BITCOUNT,
 ]);
 
+const PartialAccess = new Set([
+	MemSize.BIT0,
+	MemSize.BIT1,
+	MemSize.BIT2,
+	MemSize.BIT3,
+	MemSize.BIT4,
+	MemSize.BIT5,
+	MemSize.BIT6,
+	MemSize.BIT7,
+	MemSize.BITCOUNT,
+	MemSize.LOWER4,
+	MemSize.UPPER4,
+]);
+
 const ValueWidth = 10;
 const ReqTypeWidth = Math.max(...Object.values(ReqType).map((x) => x.name.length));
 const ReqFlagWidth = Math.max(...Object.values(ReqFlag).map((x) => x.name.length));
@@ -122,7 +145,7 @@ class LogicParseError extends Error {
 	}
 }
 
-const OPERAND_RE = /^(([~dpbvf]?)((?:0x)+[G-Z ]?|f[A-Z])([0-9A-F]{1,8}))|(([fv]?)([-+]?\d+(?:\.\d+)?))|([G-Z ]?([0-9A-F]+))|({recall})$/i;
+const OPERAND_RE = /^(([~dpbv]?)((?:0x)+[G-Z ]?|f[A-Z])(?:0x)*([0-9A-F]{1,8}))|(([fv]?)([-+]?\d+(?:\.\d+)?))|([G-Z ]?([0-9A-F]+))|({recall})$/i;
 class ReqOperand
 {
 	type;
@@ -172,16 +195,6 @@ class ReqOperand
 		catch (e) { throw new LogicParseError('operand', def); }
 	}
 
-	canonicalize()
-	{
-		if (this.rhs == null || !FLIP_CMP.has(this.op)) return;
-		if (!this.lhs.type.addr && this.rhs.type.addr) // this is backwards
-		{
-			[this.lhs, this.rhs] = [this.rhs, this.lhs];
-			this.op = FLIP_CMP.get(this.op);
-		}
-	}
-
 	static sameValue(a, b)
 	{
 		if (a == b || a == null || b == null) return a == b;
@@ -196,7 +209,7 @@ class ReqOperand
 		return this.size.maxvalue;
 	}
 
-	toValueString() { return this.type && this.type.addr ? ('0x' + this.value.toString(16).padStart(8, '0')) : this.value.toString(); }
+	toValueString() { return this.type && this.type.addr ? ('0x' + this.value.toString(16).padStart(8, '0')) : ("" + this.value); }
 	toString() { return this.type == ReqType.RECALL ? this.type.prefix : this.toValueString(); }
 	toAnnotatedString() { return (this.type.addr ? `${this.type.name} ` : "") + this.toString(); }
 
@@ -206,14 +219,17 @@ class ReqOperand
 		let size = this.size ? this.size.name : "";
 		return this.type.name.padEnd(wReqType + 1, " ") +
 			size.padEnd(wMemSize + 1, " ") +
-			this.toValueString().padEnd(wValue + 1);
+			this.toString().padEnd(wValue + 1);
 	}
 	toObject() { return {...this}; }
 }
 
+// reversal of comparison
+const CMP_REVERSE = new Map([["=", "!="], ["!=", "="], [">", "<="], ["<", ">="], [">=", "<"], ["<=", ">"]]);
+
 // original regex failed on "v-1"
 // const REQ_RE = /^([A-Z]:)?(.+?)(?:([!<>=+\-*/&\^%]{1,2})(.+?))?(?:\.(\d+)\.)?$/;
-const OPERAND_PARSING = "[~dpbvf]?(?:(?:0x)+[G-Z ]?|f[A-Z])[0-9A-F]{1,8}|[fv]?[-+]?\\d+(?:\\.\\d+)?|[G-Z ]?[0-9A-F]+|{recall}";
+const OPERAND_PARSING = "[~dpbvf]?(?:(?:0x)+[G-Z ]?|f[A-Z])(?:0x)*[0-9A-F]{1,8}|[fv]?[-+]?\\d+(?:\\.\\d+)?|[G-Z ]?[0-9A-F]+|{recall}";
 const REQ_RE = new RegExp(`^([A-Z]:)?(${OPERAND_PARSING})(?:([!<>=+\\-*/&\\^%]{1,2})(${OPERAND_PARSING}))?(?:\\.(\\d+)\\.)?$`, "i");
 class Requirement
 {
@@ -222,6 +238,7 @@ class Requirement
 	op = null;
 	rhs = null;
 	hits = 0;
+	#ref = '';
 	constructor({ flag = null, lhs, op = null, rhs = null, hits = 0 })
 	{
 		this.flag = flag;
@@ -229,10 +246,25 @@ class Requirement
 		this.op = op;
 		this.rhs = rhs;
 		this.hits = 0;
+
+		this.#ref = crypto.randomUUID();
 	}
 
+	toRefString() { return `req-${this.#ref}`; }
 	clone() { return new Requirement({...this}); }
 	hasHits() { return !this.flag || !this.flag.scalable; }
+
+	canonicalize()
+	{
+		let res = this.clone();
+		if (res.rhs != null && res.isComparisonOperator())
+			if (res.lhs.type.cprio > res.rhs.type.cprio) // this is backwards
+			{
+				[res.lhs, res.rhs] = [res.rhs, res.lhs];
+				res.op = CMP_REVERSE.get(res.op);
+			}
+		return res;
+	}
 
 	isAlwaysTrue() { return this.op == '=' && ReqOperand.equals(this.lhs, this.rhs); }
 	isAlwaysFalse()
@@ -244,7 +276,9 @@ class Requirement
 	}
 
 	isComparisonOperator() { return ['=', '!=', '>', '>=', '<', '<='].includes(this.op); }
+	reverseComparison() { if (this.isComparisonOperator()) this.op = CMP_REVERSE.get(this.op); }
 	isModifyingOperator() { return this.op && !this.isComparisonOperator(); }
+	isTerminating() { return !this.flag || !this.flag.cmod; }
 
 	static fromString(def)
 	{
@@ -333,6 +367,27 @@ class Logic
 			.filter(({ pre }) => pre != ReqFlag.ADDADDRESS) // remove everything following an AddAddress
 			.filter(({ opd }) => opd && opd.type && opd.type.addr) // keep only address reads
 			.map(({ opd }) => opd.value);
+	}
+
+	getMemoryLookups()
+	{
+		let virt = new Set();
+		for (const [gi, g] of this.groups.entries())
+		{
+			let prefix = '';
+			for (const [ri, req] of g.entries())
+			{
+				if (req.flag == ReqFlag.ADDADDRESS)
+					prefix += req.lhs.toString() + (!req.rhs ? '' : (req.op + req.rhs.toString())) + ':';
+				else
+				{
+					if (req.lhs && req.lhs.type.addr) virt.add(prefix + req.lhs.toString());
+					if (req.rhs && req.rhs.type.addr) virt.add(prefix + req.rhs.toString());
+					prefix = '';
+				}
+			}
+		}
+		return virt;
 	}
 
 	getTypes()     { return this.getOperands().map(x => x.type).filter(x => x); }
