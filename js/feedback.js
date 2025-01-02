@@ -180,7 +180,7 @@ class Assessment
 	}
 
 	add(x) { return this.issues.push(x); }
-	pass() { return this.issues.filter(x => x.type.severity > FeedbackSeverity.INFO).length == 0; }
+	pass() { return this.status() < FeedbackSeverity.WARN; }
 
 	status() { return Math.max(FeedbackSeverity.PASS, ...this.issues.map(x => x.type.severity)); }
 
@@ -595,7 +595,7 @@ function assess_writing(asset)
 			let corrected = asset[elt].replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"');
 			res.add(new Issue(Feedback.SPECIAL_CHARS, elt,
 				<ul>
-					<li>"Smart" quotes are great for typography, but often don't render correctly in emulators</li>
+					<li>"Smart" quotes are great for typography, but often don't render correctly in emulators. <a href="https://en.wikipedia.org/wiki/Quotation_mark#Curved_quotes_within_and_across_applications">What are smart quotes?</a></li>
 					<li><em><HighlightedFeedback text={asset[elt]} pattern={TYPOGRAPHY_PUNCT} /></em> &#x27F9; <code>{corrected}</code></li>
 				</ul>));
 		}
