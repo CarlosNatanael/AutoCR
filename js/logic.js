@@ -92,11 +92,21 @@ const ReqFlagMap = Object.fromEntries(
 	Object.entries(ReqFlag).map(([k, v]) => [v.prefix, v])
 );
 const MemSizeMap = Object.fromEntries(
-	Object.entries(MemSize).map(([k, v]) => [v.prefix, v])
+	[].concat(
+		Object.entries(MemSize).map(([k, v]) => [v.prefix, v]),
+		Object.entries(MemSize).map(([k, v]) => [v.prefix.toLowerCase(), v])
+	)
 );
 const FormatTypeMap = Object.fromEntries(
 	Object.entries(FormatType).map(([k, v]) => [v.type, v])
 );
+
+function canonicalizeMemSize(x)
+{
+	if (x.startsWith('0x') && x.length == 3)
+		return '0x' + x.substring(2).toUpperCase();
+	return x;
+}
 
 const BitProficiency = new Set([
 	MemSize.BIT0,
@@ -136,7 +146,7 @@ class LogicParseError extends Error {
 	}
 }
 
-const OPERAND_RE = /^(([~dpbvf]?)((?:0x)+[G-Z ]?|f[A-Z])([0-9A-F]{1,8}))|(([fv]?)([-+]?\d+(?:\.\d+)?))|([G-Z ]?([0-9A-F]+))|({recall})$/i;
+const OPERAND_RE = /^(([~dpbvf]?)((?:0x)+[G-Z ]?|f[A-Z])(?:0x)*([0-9A-F]{1,8}))|(([fv]?)([-+]?\d+(?:\.\d+)?))|([G-Z ]?([0-9A-F]+))|({recall})$/i;
 class ReqOperand
 {
 	type;
@@ -227,7 +237,7 @@ class ReqOperand
 
 // original regex failed on "v-1"
 // const REQ_RE = /^([A-Z]:)?(.+?)(?:([!<>=+\-*/&\^%]{1,2})(.+?))?(?:\.(\d+)\.)?$/;
-const OPERAND_PARSING = "[~dpbvf]?(?:(?:0x)+[G-Z ]?|f[A-Z])[0-9A-F]{1,8}|[fv]?[-+]?\\d+(?:\\.\\d+)?|[G-Z ]?[0-9A-F]+|{recall}";
+const OPERAND_PARSING = "[~dpbvf]?(?:(?:0x)+[G-Z ]?|f[A-Z])(?:0x)*[0-9A-F]{1,8}|[fv]?[-+]?\\d+(?:\\.\\d+)?|[G-Z ]?[0-9A-F]+|{recall}";
 const REQ_RE = new RegExp(`^([A-Z]:)?(${OPERAND_PARSING})(?:([!<>=+\\-*/&\\^%]{1,2})(${OPERAND_PARSING}))?(?:\\.(\\d+)\\.)?$`, "i");
 class Requirement
 {
