@@ -361,7 +361,7 @@ function assess_logic(logic)
 		if (res.stats.deltas == 0)
 			res.add(new Issue(Feedback.MISSING_DELTA, null,
 				<ul>
-					<li><a href="#">Why should all achievements use Deltas?</a></li>
+					<li><a href="https://docs.retroachievements.org/developer-docs/why-delta.html">Why should all achievements use Deltas?</a></li>
 				</ul>));
 
 		if (res.stats.priors > 0)
