@@ -657,7 +657,7 @@ class RichPresence
 			{ // display must be last, so no need to parse other line starts
 				if (line.startsWith('?'))
 				{
-					let parts = line.match(/^\?(.+?)\?(.+)$/);
+					let parts = line.match(/^\?(.+?)\?(.*)$/);
 					if (parts == null)
 						throw new LogicParseError('rich presence (malformed conditional display)', line);
 					richp.display.push({

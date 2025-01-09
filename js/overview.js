@@ -781,7 +781,7 @@ function HighlightedRichPresence({script, update = null})
 	let rptext = script.split(/\r\n|(?!\r\n)[\n-\r\x85\u2028\u2029]/g).map(line => {
 		line = line.trim();
 		if (display) line = line.startsWith('?')
-			? line.replaceAll(/\?(.+)\?(.+)/g, (_, p1, p2) => `?<span class="condition logic">${p1}</span>?${addLookups(p2)}`)
+			? line.replaceAll(/\?(.+)\?(.*)/g, (_, p1, p2) => `?<span class="condition logic">${p1}</span>?${addLookups(p2)}`)
 			: addLookups(line);
 		if (line.startsWith('Display:')) display = true;
 		return line;
