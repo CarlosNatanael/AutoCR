@@ -1,6 +1,9 @@
 const Console = Object.freeze({
 	// Nintendo
-	GB: { id: 4, name: "Game Boy", icon: "gb", },
+	GB: { id: 4, name: "Game Boy", icon: "gb", 
+		regions: [
+			
+		]},
 	GBC: { id: 6, name: "Game Boy Color", icon: "gbc", },
 	GBA: { id: 5, name: "Game Boy Advance", icon: "gba", },
 	NES: { id: 7, name: "NES/Famicom", icon: "nes", },
@@ -77,19 +80,25 @@ const AssetState = Object.freeze({
 	LOCAL: { rank: 2, name: 'local', marker: '✏️ '},
 });
 
-class Achievement
+class Asset
 {
 	id = -1;
+	index = -1;
+	author = null;
 	title;
 	desc;
+	constructor() {  }
+}
+
+class Achievement extends Asset
+{
 	points = 5;
-	author;
 	achtype = "";
 	badge;
 	state;
 	logic;
 
-	constructor() {  }
+	constructor() { super(); }
 	static fromJSON(json)
 	{
 		let ach = new Achievement();
@@ -125,18 +134,14 @@ class Achievement
 	}
 }
 
-FAST_WORDS = ["fast", "quick", "speed", "rush", "hurry", "rapid"];
-class Leaderboard
+class Leaderboard extends Asset
 {
-	id = -1;
-	title;
-	desc;
 	format;
 	lower_is_better = true;
 	state = null;
 	components = {};
 
-	constructor() {  }
+	constructor() { super(); }
 	static fromJSON(json)
 	{
 		let lb = new Leaderboard();
@@ -177,7 +182,10 @@ class Leaderboard
 	}
 
 	#usesFastWords()
-	{ return FAST_WORDS.some(x => this.desc.toLowerCase().includes(x) || this.title.toLowerCase().includes(x)); }
+	{
+		const FAST_WORDS = ["fast", "quick", "speed", "rush", "hurry", "rapid"];
+		return FAST_WORDS.some(x => this.desc.toLowerCase().includes(x) || this.title.toLowerCase().includes(x));
+	}
 
 	isTime() { return this.format.category == "time" || this.#usesFastWords(); }
 	getType()
@@ -194,30 +202,37 @@ class AchievementSet
 	title = null;
 	icon = null;
 	console = null;
-	achievements = [];
-	leaderboards = [];
+	achievements = new Map();
+	leaderboards = new Map();
 
 	constructor() {  }
-	static fromJSON(json)
+	addJSON(json)
 	{
-		let achset = new AchievementSet();
-		achset.id = json.ID;
-		achset.title = json.Title;
-		achset.icon = json.ImageIconURL;
-		achset.console = json.ConsoleID in ConsoleMap ? ConsoleMap[json.ConsoleID] : null;
+		this.id = json.ID;
+		this.title = json.Title;
+		this.icon = json.ImageIconURL;
+		this.console = json.ConsoleID in ConsoleMap ? ConsoleMap[json.ConsoleID] : null;
 
-		achset.achievements = json.Achievements
-			.filter((x) => !x.Title.toUpperCase().includes('[VOID]'))
-			.map((x) => Achievement.fromJSON(x));
-		achset.leaderboards = json.Leaderboards
-			.filter((x) => !x.Hidden)
-			.filter((x) => !x.Title.toUpperCase().includes('[VOID]'))
-			.map((x) => Leaderboard.fromJSON(x));
+		for (const [i, x] of json.Achievements.entries())
+		{
+			if (x.Title.toUpperCase().includes('[VOID]')) continue;
+			let ach = Achievement.fromJSON(x);
+			ach.index = i; // to preserve order from json file
+			this.achievements.set(ach.id, ach);
+		}
+
+		for (let [i, x] of json.Leaderboards.entries())
+		{
+			if (x.Hidden || x.Title.toUpperCase().includes('[VOID]')) continue;
+			let lb = Leaderboard.fromJSON(x);
+			lb.index = i; // to preserve order from json file
+			this.leaderboards.set(lb.id, lb);
+		}
 		
-		return achset;
+		return this;
 	}
 
-	static fromLocal(txt)
+	addLocal(txt)
 	{
 		function parseColons(line)
 		{
@@ -248,8 +263,7 @@ class AchievementSet
 		}
 
 		const lines = txt.match(/[^\r\n]+/g);
-		let achset = new AchievementSet();
-		achset.title = lines[1];
+		this.title = lines[1];
 		for (let i = 2; i < lines.length; i++)
 		{
 			const row = parseColons(lines[i]);
@@ -260,18 +274,23 @@ class AchievementSet
 					break;
 				case 'L': // leaderboard
 					asset = Leaderboard.fromLocal(row);
-					if (!asset.title.toUpperCase().includes('[VOID]'))
-						achset.leaderboards.push(asset);
+					asset.index = i + 1000000; // preserve order from file
+					if (asset.title.toUpperCase().includes('[VOID]')) continue;
+					this.leaderboards.set(asset.id, asset);
 					break;
 				default: // achievement
 					asset = Achievement.fromLocal(row);
-					if (!asset.title.toUpperCase().includes('[VOID]'))
-						achset.achievements.push(asset);
+					asset.index = i + 1000000; // preserve order from file
+					if (asset.title.toUpperCase().includes('[VOID]')) continue;
+					this.achievements.set(asset.id, asset);
 					break;
 			}
 		}
-		return achset;
+		return this;
 	}
+
+	getAchievements() { return [...this.achievements.values()]; }
+	getLeaderboards() { return [...this.leaderboards.values()]; }
 }
 
 class CodeNote

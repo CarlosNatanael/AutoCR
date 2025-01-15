@@ -10,11 +10,9 @@ function clearSelected()
 var current = { id: -1, };
 function reset_loaded()
 {
-	current.set = null;
-	current.local = null;
+	current.set = new AchievementSet();
 	current.notes = [];
 	current.rp = null;
-	current.assessment = {};
 	clearSelected();
 }
 
@@ -128,31 +126,10 @@ document.onkeydown = function(event)
 	}
 }
 
-function select_row(row)
-{
-}
-
 function get_game_title()
 {
-	if (current.set  ) return current.set.title;
-	if (current.local) return current.local.title;
+	if (current.set) return current.set.title;
 	return null;
-}
-
-function all_achievements()
-{
-	let res = [];
-	if (current.set  ) res = res.concat(current.set.achievements);
-	if (current.local) res = res.concat(current.local.achievements);
-	return res;
-}
-
-function all_leaderboards()
-{
-	let res = [];
-	if (current.set  ) res = res.concat(current.set.leaderboards);
-	if (current.local) res = res.concat(current.local.leaderboards);
-	return res;
 }
 
 function get_note_text(addr)
@@ -184,6 +161,7 @@ async function copyToClipboard(text)
 function LogicTable({logic, issues = []})
 {
 	const [isHex, setIsHex] = React.useState(false);
+	issues = [].concat(...issues);
 
 	const COLUMNS = 10;
 	function OperandCells({operand, skipNote = false})
@@ -323,7 +301,7 @@ function LogicStats({logic, stats = {}})
 			<li>Max Requirements Per Group: {stats.group_maxsize}</li>
 			<li><span title="A sequence of requirements linked by flags">Longest Chain</span>: {stats.max_chain}</li>
 		</ul>
-		<li>Addresses: {stats.virtual_addresses.size} {logic && logic.value ? '' : (stats.addresses.size <= 1 ? '☠️' : (stats.oca ? '⚠️' : ''))}</li>
+		<li><span title="Taking into account complex lookups with AddAddress">Memory Lookups</span>: {stats.memlookups.size} {logic && logic.value ? '' : (stats.addresses.size <= 1 ? '(definite OCA)' : (stats.memlookups.size <= 1 ? '(possible OCA)' : ''))}</li>
 		<li>Logic Features</li>
 		<ul>
 			<li>{stats.deltas} <code>Delta</code>s, {stats.priors} <code>Prior</code>s</li>
@@ -340,10 +318,12 @@ function LogicStats({logic, stats = {}})
 function IssueList({issues = []})
 {
 	if (issues.length == 0) return null;
-	return (<ul>{issues.map(([ndx, issue]) => (
-		<li key={ndx}>
-			<sup>(#{ndx+1})</sup> {issue.type.desc}
-			{issue.type.ref.map(ref => [' ', <sup key={ref}>[<a href={ref}>ref</a>]</sup>])}
+	return (<ul>{issues.map((issue, i) => (
+		<li key={i}>
+			<sup>(#{i+1})</sup> {issue.type.desc}
+			{issue.type.ref.map((ref, i) => <React.Fragment key={i}>
+				<sup key={ref}>[<a href={ref}>ref</a>]</sup>
+			</React.Fragment>)}
 			{issue.detail}
 		</li>
 	))}</ul>);
@@ -352,26 +332,23 @@ function IssueList({issues = []})
 function SubFeedback({issues = [], label=""})
 {
 	if (issues.length == 0) return null;
-	return [ 
-		<h2 key={'header'}>{label}</h2>,
-		<IssueList key={'issues'} issues={issues} />,
-	];
+	return (<>
+		<h2>{label}</h2>
+		<IssueList issues={issues} />
+	</>);
 }
 
 function AssetFeedback({issues = []})
 {
-	if (issues.length == 0) return null;
-	const PRESENTATION = ['title', 'desc', 'art', 'presentation'];
+	if (!issues.some(x => x.length > 0)) return null;
 	return (<div className="feedback">
 		<h1>Feedback</h1>
-		<SubFeedback
-			label="Presentation & Writing"
-			issues={[...issues.entries()].filter(([_, x]) => PRESENTATION.includes(x.target))}
-		/>
-		<SubFeedback
-			label="Logic & Design"
-			issues={[...issues.entries()].filter(([_, x]) => !PRESENTATION.includes(x.target))}
-		/>
+		{issues.map((group, i) => (
+			<SubFeedback key={i}
+				label={group.label}
+				issues={group}
+			/>
+		))}
 	</div>);
 }
 
@@ -391,8 +368,8 @@ function AchievementBadge({ach})
 
 function AchievementInfo({ach})
 {
-	let feedback = current.assessment.achievements.get(ach.id);
-	let feedback_targets = new Set(feedback.issues.map(x => x.target));
+	let feedback = ach.feedback;
+	let feedback_targets = new Set([].concat(...feedback.issues).map(x => x.target));
 
 	return (<>
 		<div className="main-header">
@@ -420,8 +397,8 @@ function AchievementInfo({ach})
 
 function LeaderboardInfo({lb})
 {
-	let feedback = current.assessment.leaderboards.get(lb.id);
-	let feedback_targets = new Set(feedback.issues.map(x => x.target));
+	let feedback = lb.feedback;
+	let feedback_targets = new Set([].concat(...feedback.issues).map(x => x.target));
 
 	const COMPONENTS = ["START", "CANCEL", "SUBMIT", "VALUE"];
 	function LeaderboardComponentStats()
@@ -484,8 +461,8 @@ function ChartCanvas({ setup })
 
 function AchievementSetOverview()
 {
-	const feedback = current.assessment.set;
-	const feedback_targets = new Set(feedback.issues.map(x => x.target));
+	const feedback = current.set.feedback;
+	const feedback_targets = new Set([].concat(...feedback.issues).map(x => x.target));
 	const stats = feedback.stats;
 
 	function AverageFeedback()
@@ -501,8 +478,8 @@ function AchievementSetOverview()
 	function CodeNotesInfo()
 	{
 		if (current.notes.length == 0) return null;
-		let notestats = current.assessment.notes.stats;
-		let setstats = current.assessment.set.stats;
+		let notestats = current.notes.feedback.stats;
+		let setstats = current.set.feedback.stats;
 		return (<>
 			<li>Code Notes:</li>
 			<ul>
@@ -522,8 +499,8 @@ function AchievementSetOverview()
 
 	function RichPresenceInfo()
 	{
-		if (!current.rp || !current.assessment.rp) return null;
-		const stats = current.assessment.rp.stats;
+		if (!current.rp || !current.rp.feedback) return null;
+		const stats = current.rp.feedback.stats;
 		return (<>
 			<li>Rich Presence:</li>
 			<ul>
@@ -543,8 +520,8 @@ function AchievementSetOverview()
 		return (<>{x} ({Math.round(100 * x / stats.achievement_count)}%)</>)
 	}
 
-	const achievements = all_achievements();
-	const leaderboards = all_leaderboards();
+	const achievements = current.set.getAchievements();
+	const leaderboards = current.set.getLeaderboards();
 
 	let set_contents = [
 		[achievements.length, 'achievement'],
@@ -640,6 +617,7 @@ function CodeNotesTable({notes = [], issues = []})
 	function toDisplayHex(addr)
 	{ return '0x' + addr.toString(16).padStart(8, '0'); }
 
+	issues = [].concat(...issues);
 	return (<div className="data-table">
 		<table className="code-notes">
 			<thead>
@@ -674,8 +652,8 @@ function CodeNotesTable({notes = [], issues = []})
 
 function CodeNotesOverview()
 {
-	const feedback = current.assessment.notes;
-	const feedback_targets = new Set(feedback.issues.map(x => x.target));
+	const feedback = current.notes.feedback;
+	const feedback_targets = new Set([].concat(...feedback.issues).map(x => x.target));
 	const stats = feedback.stats;
 
 	let authors = new Set(current.notes.map(note => note.author));
@@ -795,8 +773,8 @@ function HighlightedRichPresence({script, update = null})
 
 function RichPresenceOverview()
 {
-	const feedback = current.assessment.rp;
-	const feedback_targets = new Set(feedback.issues.map(x => x.target));
+	const feedback = current.rp.feedback;
+	const feedback_targets = new Set([].concat(...feedback.issues).map(x => x.target));
 	const stats = feedback.stats;
 
 	const logictbl = React.useRef();
@@ -847,9 +825,8 @@ function RichPresenceOverview()
 const SEVERITY_TO_CLASS = ['pass', 'warn', 'fail', 'fail'];
 function SetOverviewTab()
 {
-	if (current.set == null && current.local == null) return null;
-	let warn = current.assessment && current.assessment.set ?
-		SEVERITY_TO_CLASS[current.assessment.set.status()] : '';
+	if (current.set == null) return null;
+	let warn = SEVERITY_TO_CLASS[current.set.feedback.status()];
 	return (<tr className={`asset-row ${warn}`} onClick={(e) => show_overview(e, <AchievementSetOverview />)}>
 		<td className="asset-name">
 			🔍 Set Overview
@@ -860,8 +837,7 @@ function SetOverviewTab()
 function CodeNotesTab()
 {
 	if (current.notes.length == 0) return null;
-	let warn = current.assessment && current.assessment.notes ? 
-		SEVERITY_TO_CLASS[current.assessment.notes.status()] : '';
+	let warn = SEVERITY_TO_CLASS[current.notes.feedback.status()];
 	return (<tr className={`asset-row ${warn}`} onClick={(e) => show_overview(e, <CodeNotesOverview />)}>
 		<td className="asset-name">
 			📝 Code Notes
@@ -872,8 +848,7 @@ function CodeNotesTab()
 function RichPresenceTab()
 {
 	if (!current.rp) return null;
-	let warn = current.assessment && current.assessment.rp ? 
-		SEVERITY_TO_CLASS[current.assessment.rp.status()] : '';
+	let warn = SEVERITY_TO_CLASS[current.rp.feedback.status()];
 	return (<tr className={`asset-row ${warn}`} onClick={(e) => show_overview(e, <RichPresenceOverview />)}>
 		<td className="asset-name">
 			🎮 Rich Presence
@@ -883,7 +858,7 @@ function RichPresenceTab()
 
 function AchievementTabs()
 {
-	let achievements = all_achievements();
+	let achievements = current.set.getAchievements();
 	if (achievements.length == 0) return null;
 
 	// preload all images
@@ -895,8 +870,7 @@ function AchievementTabs()
 			<td>Achievements</td>
 		</tr>
 		{achievements.map((ach) => {
-			let warn = current.assessment.achievements && current.assessment.achievements.has(ach.id) ?
-				SEVERITY_TO_CLASS[current.assessment.achievements.get(ach.id).status()] : '';
+			let warn = SEVERITY_TO_CLASS[ach.feedback.status()];
 			return (<tr key={`a${ach.id}`} className={`asset-row ${warn}`} onClick={(e) => show_overview(e, <AchievementInfo ach={ach} />)}>
 				<td className="asset-name">
 					🏆 {ach.state.marker}{ach.title} ({ach.points})
@@ -908,7 +882,7 @@ function AchievementTabs()
 
 function LeaderboardTabs()
 {
-	let leaderboards = all_leaderboards();
+	let leaderboards = current.set.getLeaderboards();
 	if (leaderboards.length == 0) return null;
 
 	leaderboards = leaderboards.sort((a, b) => a.state.rank - b.state.rank);
@@ -917,8 +891,7 @@ function LeaderboardTabs()
 			<td>Leaderboards</td>
 		</tr>
 		{leaderboards.map((lb) => {
-			let warn = current.assessment.leaderboards && current.assessment.leaderboards.has(lb.id) ?
-				SEVERITY_TO_CLASS[current.assessment.leaderboards.get(lb.id).status()] : '';
+			let warn = SEVERITY_TO_CLASS[lb.feedback.status()];
 			return (<tr key={`b${lb.id}`} className={`asset-row ${warn}`} onClick={(e) => show_overview(e, <LeaderboardInfo lb={lb} />)}>
 				<td className="asset-name">
 					📊 {lb.state.marker}{lb.title}
@@ -958,17 +931,28 @@ function show_overview(e, node)
 
 function update()
 {
-	current.assessment.achievements = new Map(all_achievements().map(x => [x.id, assess_achievement(x)]));
-	current.assessment.leaderboards = new Map(all_leaderboards().map(x => [x.id, assess_leaderboard(x)]));
-	current.assessment.notes = assess_code_notes(current.notes);
-	current.assessment.rp = assess_rich_presence(current.rp);
-	current.assessment.set = assess_set();
+	// assess all code notes
+	assess_code_notes(current.notes);
+
+	// ensure that every achievement and leaderboard has been assessed
+	// don't assume they have already been processed, as code notes might be new
+	for (let ach of current.set.getAchievements()) assess_achievement(ach);
+	for (let lb of current.set.getLeaderboards()) assess_leaderboard(lb);
+
+	// assess rich presence
+	assess_rich_presence(current.rp);
+
+	// set assessment relies on other assessments for some stats,
+	// so this should always be the last assessment
+	assess_set(current.set);
+
+	// re-render the sidebar with any newly-loaded assets
 	sidebar.render(<SidebarTabs />);
 }
 
 function load_achievement_set(json)
 {
-	current.set = AchievementSet.fromJSON(json);
+	current.set.addJSON(json);
 	if (json.RichPresencePatch)
 		load_rich_presence(json.RichPresencePatch, false);
 	update();
@@ -976,8 +960,7 @@ function load_achievement_set(json)
 
 function load_user_file(txt)
 {
-	current.local = AchievementSet.fromLocal(txt);
-	current.local.id = current.id;
+	current.set.addLocal(txt);
 	update();
 }
 

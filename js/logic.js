@@ -11,22 +11,29 @@ const ReqType = Object.freeze({
 	RECALL: { name: "Recall", prefix: "{recall}", addr: false, },
 });
 
+/*
+	@property name: flag name
+	@property prefix: rcheevos syntax logic prefix
+	@property chain: (boolean) does the flag connect this requirement to the next one?
+	@property scalable: (boolean) can this requirement have a source modification?
+	@property cmod: (boolean) is this a combining modifier flag?
+*/
 const ReqFlag = Object.freeze({
-	PAUSEIF:     { name: "PauseIf",      prefix: "P:", chain: false, scalable: false, },
-	RESETIF:     { name: "ResetIf",      prefix: "R:", chain: false, scalable: false, },
-	RESETNEXTIF: { name: "ResetNextIf",  prefix: "Z:", chain: true,  scalable: false, },
-	ADDSOURCE:   { name: "AddSource",    prefix: "A:", chain: true,  scalable: true , },
-	SUBSOURCE:   { name: "SubSource",    prefix: "B:", chain: true,  scalable: true , },
-	ADDHITS:     { name: "AddHits",      prefix: "C:", chain: true,  scalable: false, },
-	SUBHITS:     { name: "SubHits",      prefix: "D:", chain: true,  scalable: false, },
-	ADDADDRESS:  { name: "AddAddress",   prefix: "I:", chain: true,  scalable: true , },
-	ANDNEXT:     { name: "AndNext",      prefix: "N:", chain: true,  scalable: false, },
-	ORNEXT:      { name: "OrNext",       prefix: "O:", chain: true,  scalable: false, },
-	MEASURED:    { name: "Measured",     prefix: "M:", chain: false, scalable: false, },
-	MEASUREDP:   { name: "Measured%",    prefix: "G:", chain: false, scalable: false, },
-	MEASUREDIF:  { name: "MeasuredIf",   prefix: "Q:", chain: false, scalable: false, },
-	TRIGGER:     { name: "Trigger",      prefix: "T:", chain: false, scalable: false, },
-	REMEMBER:    { name: "Remember",     prefix: "K:", chain: false, scalable: true , },
+	PAUSEIF:     { name: "PauseIf",      prefix: "P:", chain: false, scalable: false, cmod: false, },
+	RESETIF:     { name: "ResetIf",      prefix: "R:", chain: false, scalable: false, cmod: false, },
+	RESETNEXTIF: { name: "ResetNextIf",  prefix: "Z:", chain: true,  scalable: false, cmod: false, },
+	ADDSOURCE:   { name: "AddSource",    prefix: "A:", chain: true,  scalable: true , cmod: true , },
+	SUBSOURCE:   { name: "SubSource",    prefix: "B:", chain: true,  scalable: true , cmod: true , },
+	ADDHITS:     { name: "AddHits",      prefix: "C:", chain: true,  scalable: false, cmod: false, },
+	SUBHITS:     { name: "SubHits",      prefix: "D:", chain: true,  scalable: false, cmod: false, },
+	ADDADDRESS:  { name: "AddAddress",   prefix: "I:", chain: true,  scalable: true , cmod: true , },
+	ANDNEXT:     { name: "AndNext",      prefix: "N:", chain: true,  scalable: false, cmod: true , },
+	ORNEXT:      { name: "OrNext",       prefix: "O:", chain: true,  scalable: false, cmod: true , },
+	MEASURED:    { name: "Measured",     prefix: "M:", chain: false, scalable: false, cmod: false, },
+	MEASUREDP:   { name: "Measured%",    prefix: "G:", chain: false, scalable: false, cmod: false, },
+	MEASUREDIF:  { name: "MeasuredIf",   prefix: "Q:", chain: false, scalable: false, cmod: false, },
+	TRIGGER:     { name: "Trigger",      prefix: "T:", chain: false, scalable: false, cmod: false, },
+	REMEMBER:    { name: "Remember",     prefix: "K:", chain: false, scalable: true , cmod: false, },
 });
 
 const MemSize = Object.freeze({
@@ -196,16 +203,6 @@ class ReqOperand
 		catch (e) { throw new LogicParseError('operand', def); }
 	}
 
-	canonicalize()
-	{
-		if (this.rhs == null || !FLIP_CMP.has(this.op)) return;
-		if (!this.lhs.type.addr && this.rhs.type.addr) // this is backwards
-		{
-			[this.lhs, this.rhs] = [this.rhs, this.lhs];
-			this.op = FLIP_CMP.get(this.op);
-		}
-	}
-
 	static sameValue(a, b)
 	{
 		if (a == b || a == null || b == null) return a == b;
@@ -235,6 +232,9 @@ class ReqOperand
 	toObject() { return {...this}; }
 }
 
+// reversal of comparison
+const CMP_REVERSE = new Map([["=", "!="], ["!=", "="], [">", "<="], ["<", ">="], [">=", "<"], ["<=", ">"]]);
+
 // original regex failed on "v-1"
 // const REQ_RE = /^([A-Z]:)?(.+?)(?:([!<>=+\-*/&\^%]{1,2})(.+?))?(?:\.(\d+)\.)?$/;
 const OPERAND_PARSING = "[~dpbvf]?(?:(?:0x)+[G-Z ]?|f[A-Z])(?:0x)*[0-9A-F]{1,8}|[fv]?[-+]?\\d+(?:\\.\\d+)?|[G-Z ]?[0-9A-F]+|{recall}";
@@ -245,7 +245,7 @@ class Requirement
 	lhs;
 	op = null;
 	rhs = null;
-	hits = 0;
+	hits = 0;zz
 	constructor({ flag = null, lhs, op = null, rhs = null, hits = 0 })
 	{
 		this.flag = flag;
@@ -258,6 +258,16 @@ class Requirement
 	clone() { return new Requirement({...this}); }
 	hasHits() { return !this.flag || !this.flag.scalable; }
 
+	canonicalize()
+	{
+		if (this.rhs == null || !this.isComparisonOperator()) return;
+		if (!this.lhs.type.addr && this.rhs.type.addr) // this is backwards
+		{
+			[this.lhs, this.rhs] = [this.rhs, this.lhs];
+			this.op = CMP_REVERSE.get(this.op);
+		}
+	}
+
 	isAlwaysTrue() { return this.op == '=' && ReqOperand.equals(this.lhs, this.rhs); }
 	isAlwaysFalse()
 	{ 
@@ -268,7 +278,9 @@ class Requirement
 	}
 
 	isComparisonOperator() { return ['=', '!=', '>', '>=', '<', '<='].includes(this.op); }
+	reverseComparison() { if (this.isComparisonOperator()) this.op = CMP_REVERSE.get(this.op); }
 	isModifyingOperator() { return this.op && !this.isComparisonOperator(); }
+	isTerminating() { return !this.flag || !this.flag.cmod; }
 
 	static fromString(def)
 	{
@@ -357,6 +369,27 @@ class Logic
 			.filter(({ pre }) => pre != ReqFlag.ADDADDRESS) // remove everything following an AddAddress
 			.filter(({ opd }) => opd && opd.type && opd.type.addr) // keep only address reads
 			.map(({ opd }) => opd.value);
+	}
+
+	getMemoryLookups()
+	{
+		let virt = new Set();
+		for (const [gi, g] of this.groups.entries())
+		{
+			let prefix = '';
+			for (const [ri, req] of g.entries())
+			{
+				if (req.flag == ReqFlag.ADDADDRESS)
+					prefix += req.lhs.toString() + (!req.rhs ? '' : (req.op + req.rhs.toString())) + ':';
+				else
+				{
+					if (req.lhs && req.lhs.type.addr) virt.add(prefix + req.lhs.toString());
+					if (req.rhs && req.rhs.type.addr) virt.add(prefix + req.rhs.toString());
+					prefix = '';
+				}
+			}
+		}
+		return virt;
 	}
 
 	getTypes()     { return this.getOperands().map(x => x.type).filter(x => x); }
