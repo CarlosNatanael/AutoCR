@@ -54,7 +54,7 @@ const Feedback = Object.freeze({
 			"https://docs.retroachievements.org/guidelines/content/naming-conventions.html",
 			"https://docs.retroachievements.org/developer-docs/tips-and-tricks.html#naming-convention-tips",
 		], },
-	FOREIGN_CHARS: { severity: FeedbackSeverity.INFO, desc: `Achievement titles and descriptions should be written in English and should avoid special characters. For policy exceptions regarding the use of foreign language, ${send_message_to("QATeam")}`,
+	FOREIGN_CHARS: { severity: FeedbackSeverity.INFO, desc: `Achievement titles and descriptions should be written in English and should avoid special characters.`,
 		ref: ["https://docs.retroachievements.org/guidelines/content/writing-policy.html#language",], },
 
 	// set design errors
@@ -938,6 +938,7 @@ function* check_foreign(asset)
 			yield new Issue(Feedback.FOREIGN_CHARS, elt,
 				<ul>
 					<li><em><HighlightedFeedback text={asset[elt]} pattern={FOREIGN_RE} /></em></li>
+					<li>For policy exceptions regarding the use of foreign language, <a href={send_message_to("QATeam")}>message QATeam</a></li>
 				</ul>);
 }
 
