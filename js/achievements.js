@@ -232,7 +232,7 @@ class AchievementSet
 		return this;
 	}
 
-	addLocal(txt)
+	addLocal(txt, notes)
 	{
 		function parseColons(line)
 		{
@@ -270,7 +270,8 @@ class AchievementSet
 			let asset;
 			switch (row[0][0])
 			{
-				case 'N': // TODO: this is a local code note
+				case 'N': // local code note
+					notes.push(new CodeNote(row[1], row[2], null))
 					break;
 				case 'L': // leaderboard
 					asset = Leaderboard.fromLocal(row);
@@ -300,6 +301,8 @@ class CodeNote
 	type = null; // null means unknown, otherwise MemSize object
 	note = "";
 	author = "";
+	enum = null;
+
 	constructor(addr, note, author)
 	{
 		this.addr = +addr;
@@ -307,6 +310,8 @@ class CodeNote
 		this.author = author;
 
 		[this.type, this.size] = CodeNote.getSize(note);
+		if (!this.isProbablePointer())
+			this.enum = CodeNote.parseEnumerations(note);
 	}
 
 	isArray() { return this.size >= (this.type ? this.type.bytes : 1) * 2; }
@@ -314,6 +319,19 @@ class CodeNote
 	contains(addr)
 	{
 		return addr >= this.addr && addr < this.addr + this.size;
+	}
+
+	isProbablePointer()
+	{
+		const lines = this.note.toLowerCase().split('\n');
+
+		// if the first line includes 'ptr' or 'pointer'
+		if (['ptr', 'pointer'].some(x => lines[0].includes(x))) return true;
+
+		// if 2 or more lines after the first line start with a "+"
+		if (lines.filter((x, i) => i > 0 && x.trim().startsWith('+')).length >= 2) return true;
+
+		return false;
 	}
 
 	// transliterated closely from CodeNoteModel::ExtractSize for maximum compatability
@@ -481,6 +499,40 @@ class CodeNote
 		}
 
 		return [memSize, bytes];
+	}
+
+	static parseEnumerations(note)
+	{
+		const ENUMERATION_RE = /((?:(?:0x)?[0-9a-f]+)+)([^\w\d]*[^\w\d\s][^\w\d]*).+$/i;
+
+		const lines = note.split('\n');
+		let delim_count = new Map();
+		for (let i = 1; i < lines.length; i++)
+		{
+			const m = lines[i].trim().match(ENUMERATION_RE);
+			if (m == null) continue;
+			delim_count.set(m[2], (delim_count.get(m[2]) || 0) + 1);
+		}
+
+		if (delim_count.size == 0) return null;
+		let [delim, dcount] = [...delim_count.entries()].sort(([a, av], [b, bv]) => bv - av)[0];
+
+		if (dcount == 1) return null;
+
+		let enumerations = new Map();
+		for (let i = 1; i < lines.length; i++)
+		{
+			if (!lines[i].includes(delim)) continue;
+			let [lhs, ...rhs] = lines[i].split(delim);
+			rhs = rhs.join(delim).trim();
+
+			// skip any decoration at the start of the string (sometimes padding like `---`)
+			lhs = lhs.substring(lhs.search(/(?:0x)?[0-9a-f]{2,}/i));
+
+			for (const key of lhs.split(','))
+				enumerations.set(key.trim(), rhs);
+		}
+		return enumerations;
 	}
 }
 

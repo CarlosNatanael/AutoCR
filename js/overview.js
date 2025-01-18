@@ -301,7 +301,7 @@ function LogicStats({logic, stats = {}})
 			<li>Max Requirements Per Group: {stats.group_maxsize}</li>
 			<li><span title="A sequence of requirements linked by flags">Longest Chain</span>: {stats.max_chain}</li>
 		</ul>
-		<li><span title="Taking into account complex lookups with AddAddress">Memory Lookups</span>: {stats.memlookups.size} {logic && logic.value ? '' : (stats.addresses.size <= 1 ? '(definite OCA)' : (stats.memlookups.size <= 1 ? '(possible OCA)' : ''))}</li>
+		<li><span title="Number of unique lookups, including lookups with AddAddress">Memory Lookup Count</span>: {stats.memlookups.size} {logic && logic.value ? '' : (stats.addresses.size <= 1 ? '(definite OCA)' : (stats.memlookups.size <= 1 ? '(possible OCA)' : ''))}</li>
 		<li>Logic Features</li>
 		<ul>
 			<li>{stats.deltas} <code>Delta</code>s, {stats.priors} <code>Prior</code>s</li>
@@ -932,6 +932,7 @@ function show_overview(e, node)
 function update()
 {
 	// assess all code notes
+	current.notes.sort((a, b) => a.addr - b.addr);
 	assess_code_notes(current.notes);
 
 	// ensure that every achievement and leaderboard has been assessed
@@ -960,13 +961,12 @@ function load_achievement_set(json)
 
 function load_user_file(txt)
 {
-	current.set.addLocal(txt);
+	current.set.addLocal(txt, current.notes);
 	update();
 }
 
 function load_code_notes(json)
 {
-	current.notes = [];
 	for (const obj of json) if (obj.Note)
 		current.notes.push(new CodeNote(obj.Address, obj.Note, obj.User));
 	update();

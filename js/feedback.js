@@ -69,17 +69,23 @@ const Feedback = Object.freeze({
 		ref: ["https://docs.retroachievements.org/developer-docs/difficulty-scale-and-balance.html",], },
 	PROGRESSION_ONLY: { severity: FeedbackSeverity.WARN, desc: "Progression-only sets should be avoided. Consider adding custom challenge achievements to improve it.",
 		ref: ["https://retroachievements.org/game/5442",], },
+	DUPLICATE_TITLES: { severity: FeedbackSeverity.WARN, desc: "Assets should all have unique titles to distinguish them from one another.",
+		ref: [], },
+	DUPLICATE_DESCRIPTIONS: { severity: FeedbackSeverity.INFO, desc: "Assets should have unique descriptions. Duplicate descriptions likely indicate redundant assets.",
+		ref: [], },
 
 	// code notes
 	NOTE_EMPTY: { severity: FeedbackSeverity.WARN, desc: "Empty code note.",
 		ref: [], },
 	NOTE_NO_SIZE: { severity: FeedbackSeverity.WARN, desc: "Code notes must have size information.",
 		ref: ["https://docs.retroachievements.org/guidelines/content/code-notes.html#specifying-memory-addresses-size",], },
-	NOTE_ENUM_HEX: { severity: FeedbackSeverity.WARN, desc: "Enumerated hex values in code notes must be prefixed with \"0x\".",
+	NOTE_ENUM_HEX: { severity: FeedbackSeverity.WARN, desc: "Enumerated hex values in code notes should be prefixed with \"0x\" to avoid being misinterpreted as decimal values.",
+		ref: ["https://docs.retroachievements.org/guidelines/content/code-notes.html#adding-values-and-labels",], },
+	NOTE_ENUM_TOO_LARGE: { severity: FeedbackSeverity.WARN, desc: "Enumerated values too large for code note size information.",
 		ref: ["https://docs.retroachievements.org/guidelines/content/code-notes.html#adding-values-and-labels",], },
 	BAD_REGION_NOTE: { severity: FeedbackSeverity.WARN, desc: "Some memory regions are unsafe, redundant, or should not otherwise be used.",
 		ref: ['https://docs.retroachievements.org/developer-docs/console-specific-tips.html',], },
-	UNALIGNED_NOTE: { severity: FeedbackSeverity.INFO, desc: "16- and 32-bit data is usually, but not always, word-aligned.",
+	UNALIGNED_NOTE: { severity: FeedbackSeverity.INFO, desc: "16- and 32-bit data is often word-aligned.",
 		ref: [], },
 
 	// rich presence
@@ -116,6 +122,8 @@ const Feedback = Object.freeze({
 			'https://docs.retroachievements.org/developer-docs/memory-inspector.html',
 			'https://docs.retroachievements.org/guidelines/content/code-notes.html',
 		], },
+	MISSING_ENUMERATION: { severity: FeedbackSeverity.INFO, desc: "A value was used that doesn't match any of the enumerated values in the code note.",
+		ref: ['https://docs.retroachievements.org/guidelines/content/code-notes.html#adding-values-and-labels',], },
 	SOURCE_MOD_MEASURED: { severity: FeedbackSeverity.ERROR, desc: "Placing a source modification on a Measured requirement can cause faulty values in older versions of RetroArch (pre-1.10.1).",
 		ref: ['https://discord.com/channels/310192285306454017/386068797921951755/1247501391908307027',], },
 	PAUSELOCK_NO_RESET: { severity: FeedbackSeverity.WARN, desc: "PauseLocks require a reset, either via ResetNextIf, or a ResetIf in another group.",
@@ -978,6 +986,55 @@ function* check_notes_missing_size(notes)
 				</ul>);
 }
 
+const NUMERIC_RE = /(0x)?([0-9a-f]{2,})\b/gi;
+function* check_notes_enum_hex(notes)
+{
+	for (const note of notes) if (note.enum)
+	{
+		let found = [];
+		for (const [k, v] of note.enum.entries())
+			for (const m of k.matchAll(NUMERIC_RE))
+				if (m[2].match(/[a-f]/i) && !m[1])
+					found.push(k);
+		
+		if (found.length > 0)
+			yield new Issue(Feedback.NOTE_ENUM_HEX, note,
+				<ul>
+					<li>Code note at <code className="ref-link" data-ref={note.addr}>{toDisplayHex(note.addr)}</code></li>
+					<li>Found potential hex values: {found.map((x, i) => <React.Fragment key={i}>
+						{i == 0 ? '' : ', '} <code>{x}</code>
+					</React.Fragment>)}</li>
+				</ul>);
+	}
+}
+
+function* check_notes_enum_size_mismatch(notes)
+{
+	for (const note of notes) if (note.enum && note.type)
+	{
+		let found = [];
+		for (const [k, v] of note.enum.entries())
+			for (const m of k.matchAll(NUMERIC_RE))
+				try
+				{
+					if (+m[0] > note.type.maxvalue)		
+						found.push(m[0]);
+				}
+				catch (error) { }
+
+		if (found.length > 0)
+			yield new Issue(Feedback.NOTE_ENUM_TOO_LARGE, note,
+				<ul>
+					<li>Code note at <code className="ref-link" data-ref={note.addr}>{toDisplayHex(note.addr)}</code></li>
+					<li>The code note is listed as <code>{note.type.name}</code>, which has a max value of <code>0x{(note.type.maxvalue.toString(16).toUpperCase())}</code></li>
+					<li>The following enumerated values are too large for this code note: {found.map((x, i) => <React.Fragment key={i}>
+						{i == 0 ? '' : ', '} <code>{x}</code>
+					</React.Fragment>)}</li>
+				</ul>
+			);
+	}
+}
+
 function* check_rp_dynamic(rp)
 {
 	if (!rp.display.some(x => x.condition != null))
@@ -1042,6 +1099,32 @@ function* check_rp_notes(rp)
 	}
 }
 
+function* check_source_mod_measured(logic)
+{
+	if (!logic.value) return;
+	for (const group of logic.groups)
+		for (const [ri, req] of group.entries())
+			if (req.flag == ReqFlag.MEASURED && req.isModifyingOperator())
+			{
+				let reqclone = req.clone();
+				reqclone.flag = ReqFlag.ADDSOURCE;
+				let fixed = reqclone.toMarkdown() + "\n" +
+					Requirement.fromString("M:0").toMarkdown();
+
+				for (let i = ri - 1; i >= 0; i--)
+				{
+					if (group[i].isTerminating()) break;
+					fixed = group[i].toMarkdown() + '\n' + fixed;
+				}
+
+				yield new Issue(Feedback.SOURCE_MOD_MEASURED, req,
+					<ul>
+						<li>This can be fixed by using <code>AddSource</code> to add to a <code>Measured Val 0</code></li>
+						<pre><code>{fixed}</code></pre>
+					</ul>);
+			}
+}
+
 function* check_progression_typing(set)
 {
 	// reflect an issue if achievement typing hasn't been added
@@ -1049,6 +1132,37 @@ function* check_progression_typing(set)
 		yield new Issue(Feedback.NO_TYPING, null);
 	else if (!set.getAchievements().some(ach => ach.achtype == 'progression'))
 		yield new Issue(Feedback.NO_PROGRESSION, null);
+}
+
+function* check_duplicate_text(set)
+{
+	let titlegroups = new Map();
+	let descgroups = new Map();
+
+	for (const assetgroup of [set.getAchievements(), set.getLeaderboards()])
+		for (const asset of assetgroup)
+		{
+			if (!titlegroups.has(asset.title)) titlegroups.set(asset.title, []);
+			titlegroups.get(asset.title).push(asset);
+
+			if (!descgroups.has(asset.desc)) descgroups.set(asset.desc, []);
+			descgroups.get(asset.desc).push(asset);
+		}
+
+	for (let [title, group] of titlegroups.entries())
+		if (group.length > 1) yield new Issue(Feedback.DUPLICATE_TITLES, null,
+			<ul>
+				<li>{group.length} assets share the title <code>{title}</code></li>
+			</ul>
+		);
+
+	for (let [desc, group] of descgroups.entries())
+		if (group.length > 1) yield new Issue(Feedback.DUPLICATE_DESCRIPTIONS, null,
+			<ul>
+				<li>{group.length} assets share the same description:</li>
+				<ul>{group.map((asset, i) => <li key={i}>{asset.title}</li>)}</ul>
+			</ul>
+		);
 }
 
 const LOGIC_TESTS = [
@@ -1084,6 +1198,8 @@ const PRESENTATION_TESTS = [
 
 const CODE_NOTE_TESTS = [
 	check_notes_missing_size,
+	check_notes_enum_hex,
+	check_notes_enum_size_mismatch,
 ];
 
 const RICH_PRESENCE_TESTS = [
@@ -1093,13 +1209,19 @@ const RICH_PRESENCE_TESTS = [
 
 const SET_TESTS = [
 	check_progression_typing,
+	check_duplicate_text,
 ];
 
 const LEADERBOARD_TESTS = {
 	'STA': ACHIEVEMENT_TESTS,
 	'CAN': LOGIC_TESTS,
 	'SUB': LOGIC_TESTS,
-	'VAL': LOGIC_TESTS,
+	'VAL': [].concat(
+			[
+				check_source_mod_measured,
+			],
+			LOGIC_TESTS,
+		),
 }
 
 function get_leaderboard_issues(lb)
