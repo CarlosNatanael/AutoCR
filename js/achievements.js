@@ -519,7 +519,8 @@ class CodeNote
 
 		if (dcount == 1) return null;
 
-		let enumerations = new Map();
+		let enumerations = [];
+		let isHex = false;
 		for (let i = 1; i < lines.length; i++)
 		{
 			if (!lines[i].includes(delim)) continue;
@@ -530,9 +531,15 @@ class CodeNote
 			lhs = lhs.substring(lhs.search(/(?:0x)?[0-9a-f]{2,}/i));
 
 			for (const key of lhs.split(','))
-				enumerations.set(key.trim(), rhs);
+			{
+				enumerations.push({literal: key.trim(), meaning: rhs});
+				isHex ||= key.match(/[a-f]/i);
+			}
 		}
-		return enumerations;
+
+		for (let e of enumerations)
+			e.value = Number.parseInt(e.literal, isHex ? 16 : 10);
+		return enumerations.filter(x => !Number.isNaN(x));
 	}
 }
 

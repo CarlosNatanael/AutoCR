@@ -992,10 +992,10 @@ function* check_notes_enum_hex(notes)
 	for (const note of notes) if (note.enum)
 	{
 		let found = [];
-		for (const [k, v] of note.enum.entries())
-			for (const m of k.matchAll(NUMERIC_RE))
+		for (const {literal} of note.enum)
+			for (const m of literal.matchAll(NUMERIC_RE))
 				if (m[2].match(/[a-f]/i) && !m[1])
-					found.push(k);
+					found.push(literal);
 		
 		if (found.length > 0)
 			yield new Issue(Feedback.NOTE_ENUM_HEX, note,
@@ -1013,14 +1013,9 @@ function* check_notes_enum_size_mismatch(notes)
 	for (const note of notes) if (note.enum && note.type)
 	{
 		let found = [];
-		for (const [k, v] of note.enum.entries())
-			for (const m of k.matchAll(NUMERIC_RE))
-				try
-				{
-					if (+m[0] > note.type.maxvalue)		
-						found.push(m[0]);
-				}
-				catch (error) { }
+		for (const {literal, value} of note.enum)
+			if (value > note.type.maxvalue)		
+				found.push(literal);
 
 		if (found.length > 0)
 			yield new Issue(Feedback.NOTE_ENUM_TOO_LARGE, note,
