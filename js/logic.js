@@ -108,13 +108,6 @@ const FormatTypeMap = Object.fromEntries(
 	Object.entries(FormatType).map(([k, v]) => [v.type, v])
 );
 
-function canonicalizeMemSize(x)
-{
-	if (x.startsWith('0x') && x.length == 3)
-		return '0x' + x.substring(2).toUpperCase();
-	return x;
-}
-
 const BitProficiency = new Set([
 	MemSize.BIT0,
 	MemSize.BIT1,
@@ -260,12 +253,14 @@ class Requirement
 
 	canonicalize()
 	{
-		if (this.rhs == null || !this.isComparisonOperator()) return;
-		if (!this.lhs.type.addr && this.rhs.type.addr) // this is backwards
-		{
-			[this.lhs, this.rhs] = [this.rhs, this.lhs];
-			this.op = CMP_REVERSE.get(this.op);
-		}
+		let res = this.clone();
+		if (res.rhs != null && res.isComparisonOperator())
+			if (!res.lhs.type.addr && res.rhs.type.addr) // this is backwards
+			{
+				[res.lhs, res.rhs] = [res.rhs, res.lhs];
+				res.op = CMP_REVERSE.get(res.op);
+			}
+		return res;
 	}
 
 	isAlwaysTrue() { return this.op == '=' && ReqOperand.equals(this.lhs, this.rhs); }
