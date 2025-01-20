@@ -122,7 +122,7 @@ const Feedback = Object.freeze({
 			'https://docs.retroachievements.org/developer-docs/memory-inspector.html',
 			'https://docs.retroachievements.org/guidelines/content/code-notes.html',
 		], },
-	MISSING_ENUMERATION: { severity: FeedbackSeverity.INFO, desc: "A value was used that doesn't match any of the enumerated values in the code note.",
+	MISSING_ENUMERATION: { severity: FeedbackSeverity.WARN, desc: "A value was used that doesn't match any of the enumerated values in the code note.",
 		ref: ['https://docs.retroachievements.org/guidelines/content/code-notes.html#adding-values-and-labels',], },
 	SOURCE_MOD_MEASURED: { severity: FeedbackSeverity.ERROR, desc: "Placing a source modification on a Measured requirement can cause faulty values in older versions of RetroArch (pre-1.10.1).",
 		ref: ['https://discord.com/channels/310192285306454017/386068797921951755/1247501391908307027',], },
@@ -889,6 +889,32 @@ function* check_uuo_resetnextif(logic)
 		}
 }
 
+function* check_missing_enum(logic)
+{
+	for (const [gi, g] of logic.groups.entries())
+		for (const [ri, req] of g.entries())
+		{
+			if (ri > 0 && g[ri-1].flag == ReqFlag.ADDADDRESS) continue;
+			let creq = req.canonicalize();
+
+			if (creq.lhs.type.addr && creq.rhs && creq.rhs.type == ReqType.VALUE)
+				for (const note of current.notes)
+					if (note.contains(creq.lhs.value) && note.enum)
+			{
+				let found = false;
+				enumloop: for (const e of note.enum)
+					if (e.value == creq.rhs.value)
+					{ found = true; break enumloop; }
+
+				if (!found)
+					yield new Issue(Feedback.MISSING_ENUMERATION, req, 
+						<ul>
+							<li>Enumeration <code>0x{creq.rhs.value.toString(16)}</code> not found for note at address <code>{toDisplayHex(creq.lhs.value)}</code></li>
+						</ul>);
+			}
+		}
+}
+
 function* check_title_case(asset)
 {
 	let corrected_title = make_title_case(asset.title);
@@ -1172,6 +1198,7 @@ const LOGIC_TESTS = [
 	check_uuo_reset,
 	check_reset_with_hits,
 	check_uuo_resetnextif,
+	check_missing_enum,
 ];
 
 const ACHIEVEMENT_TESTS = [].concat(
