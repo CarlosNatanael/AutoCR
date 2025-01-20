@@ -764,7 +764,7 @@ function HighlightedRichPresence({script, update = null})
 		if (line.startsWith('Display:')) display = true;
 		return line;
 	}).join('\n');
-	rptext = rptext.replaceAll(/((Lookup|Format|Display):(.+))/g, '<span class="header" id="def-$3">$1</span>');
+	rptext = rptext.replaceAll(/((Lookup|Format|Display):([a-zA-Z0-9_ ]+))/g, '<span class="header" id="def-$3">$1</span>');
 
 	return (<div className="rich-presence clear">
 		<pre><code ref={ref} dangerouslySetInnerHTML={{__html: rptext}}></code></pre>
