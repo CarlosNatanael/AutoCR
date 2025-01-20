@@ -113,7 +113,7 @@ const Feedback = Object.freeze({
 		ref: [], },
 	STALE_ADDADDRESS: { severity: FeedbackSeverity.INFO, desc: "Stale references with AddAddress can be dangerous. Use caution when reading a pointer from the previous frame (AddAddress + Delta).",
 		ref: ['https://docs.retroachievements.org/developer-docs/flags/addaddress.html#using-delta-with-chained-pointers',], },
-	NEGATIVE_OFFSET: { severity: FeedbackSeverity.WARN, desc: "Negative pointer offsets are wrong in the vast majority of cases and are incompatible with the way pointers actually work. At best, this will only work incidentally.",
+	NEGATIVE_OFFSET: { severity: FeedbackSeverity.WARN, desc: "Negative pointer offsets are wrong in the vast majority of cases and are incompatible with the way pointers actually work.",
 		ref: ['https://docs.retroachievements.org/developer-docs/flags/addaddress.html#calculating-your-offset'], },
 	BAD_REGION_LOGIC: { severity: FeedbackSeverity.ERROR, desc: "Some memory regions are unsafe, redundant, or should not otherwise be used for achievement logic.",
 		ref: ['https://docs.retroachievements.org/developer-docs/console-specific-tips.html'], },
@@ -149,9 +149,9 @@ const Feedback = Object.freeze({
 			'https://docs.retroachievements.org/developer-docs/flags/addsource.html',
 			'https://docs.retroachievements.org/developer-docs/flags/subsource.html',
 		], },
-	UNSATISFIABLE: { severity: FeedbackSeverity.ERROR, desc: "Requirement can never be satisfied (always-false). If this is intentional, writing it explicitly is preferred (<code>Val 0 = Val 1</code>, for instance).",
+	UNSATISFIABLE: { severity: FeedbackSeverity.ERROR, desc: "Requirement can never be satisfied (always-false).",
 		ref: [], },
-	UNNECESSARY: { severity: FeedbackSeverity.INFO, desc: "Requirement will always be satisfied (always-true). If this is intentional, writing it explicitly is preferred (<code>Val 0 = Val 0</code>, for instance).",
+	UNNECESSARY: { severity: FeedbackSeverity.INFO, desc: "Requirement will always be satisfied (always-true).",
 		ref: [], },
 });
 
