@@ -1,14 +1,13 @@
 const ReqType = Object.freeze({
-	MEM:    { name: "Mem",    prefix: "",         addr: true, },
-	DELTA:  { name: "Delta",  prefix: "d",        addr: true, },
-	PRIOR:  { name: "Prior",  prefix: "p",        addr: true, },
-	BCD:    { name: "BCD",    prefix: "b",        addr: true, },
-	INVERT: { name: "Invert", prefix: "~",        addr: true, },
+	MEM:    { name: "Mem",    prefix: "",         addr: true,  cprio: 10, },
+	DELTA:  { name: "Delta",  prefix: "d",        addr: true,  cprio: 11, },
+	PRIOR:  { name: "Prior",  prefix: "p",        addr: true,  cprio: 12, },
+	BCD:    { name: "BCD",    prefix: "b",        addr: true,  cprio: 13, },
+	INVERT: { name: "Invert", prefix: "~",        addr: true,  cprio: 14, },
 	
-	VALUE:  { name: "Value",  prefix: "v",        addr: false, },
-	FLOAT:  { name: "Float",  prefix: "f",        addr: false, },
-
-	RECALL: { name: "Recall", prefix: "{recall}", addr: false, },
+	RECALL: { name: "Recall", prefix: "{recall}", addr: false, cprio: 20, },
+	VALUE:  { name: "Value",  prefix: "v",        addr: false, cprio: 21, },
+	FLOAT:  { name: "Float",  prefix: "f",        addr: false, cprio: 22, },
 });
 
 /*
@@ -255,7 +254,7 @@ class Requirement
 	{
 		let res = this.clone();
 		if (res.rhs != null && res.isComparisonOperator())
-			if (!res.lhs.type.addr && res.rhs.type.addr) // this is backwards
+			if (res.lhs.type.cprio > res.rhs.type.cprio) // this is backwards
 			{
 				[res.lhs, res.rhs] = [res.rhs, res.lhs];
 				res.op = CMP_REVERSE.get(res.op);
