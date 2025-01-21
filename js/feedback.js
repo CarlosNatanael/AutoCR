@@ -483,16 +483,16 @@ function generate_set_stats(set)
 		let addrs = new Map();
 		function _attach_source(addr, val)
 		{
-			if (!(addr in addrs)) addrs.set(addr, []);
+			if (!addrs.has(addr)) addrs.set(addr, []);
 			addrs.get(addr).push(val);
 		}
 
 		for (const ach of achievements)
-			for (const addr of ach.logic.getAddresses())
+			for (const addr of new Set(ach.logic.getAddresses()))
 				_attach_source(addr, `Achievement: ${ach.title}`);
 		for (const lb of leaderboards)
 			for (const [tag, logic] of Object.entries(lb.components))
-				for (const addr of logic.getAddresses())
+				for (const addr of new Set(logic.getAddresses()))
 					_attach_source(addr, `Leaderboard (${tag}): ${lb.title}`);
 
 		let displayMode = false, clause = 0;
