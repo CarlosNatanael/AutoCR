@@ -532,7 +532,7 @@ class CodeNote
 			for (const m of lhs.matchAll(/\b(0x)?([0-9a-f]+)\b/gi))
 			{
 				enumerations.push({literal: m[0], meaning: rhs});
-				isHex ||= m[0].match(/[a-f]/i);
+				isHex ||= m[1] || m[0].match(/[a-f]/i);
 			}
 		}
 

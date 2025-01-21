@@ -907,7 +907,7 @@ function* check_missing_enum(logic)
 				if (!found)
 					yield new Issue(Feedback.MISSING_ENUMERATION, req, 
 						<ul>
-							<li>Enumeration <code>0x{creq.rhs.value.toString(16)}</code> not found for note at address <code>{toDisplayHex(creq.lhs.value)}</code></li>
+							<li>Enumeration <code>0x{creq.rhs.value.toString(16).padStart(2, '0')}</code> not found for note at address <code>{toDisplayHex(creq.lhs.value)}</code></li>
 						</ul>);
 			}
 		}
