@@ -493,11 +493,11 @@ function generate_set_stats(set)
 
 		for (const ach of achievements)
 			for (const addr of new Set(ach.logic.getAddresses()))
-				_attach_source(addr, `Achievement: ${ach.title}`);
+				_attach_source(addr, `🏆 Achievement: ${ach.title}`);
 		for (const lb of leaderboards)
 			for (const [tag, logic] of Object.entries(lb.components))
 				for (const addr of new Set(logic.getAddresses()))
-					_attach_source(addr, `Leaderboard (${tag}): ${lb.title}`);
+					_attach_source(addr, `📊 Leaderboard (${tag}): ${lb.title}`);
 
 		let displayMode = false, clause = 0;
 		if (current.rp && current.rp.text)
@@ -509,10 +509,10 @@ function generate_set_stats(set)
 					clause++;
 					if (m[1] != '') // check the condition
 						for (const addr of Logic.fromString(m[2]).getAddresses())
-							_attach_source(addr, `Rich Presence Display Condition #${clause}`)
+							_attach_source(addr, `🎮 Rich Presence Display Condition #${clause}`)
 					for (const m2 of m[3].matchAll(/@([ _a-z][ _a-z0-9]*)\((.+?)\)/gi))
 						for (const addr of Logic.fromString(m2[2]).getAddresses())
-							_attach_source(addr, `Rich Presence Display Lookup(${m2[1]}) in Clause #${clause}`)
+							_attach_source(addr, `🎮 Rich Presence Display Lookup(${m2[1]}) in Clause #${clause}`)
 				}
 			}
 
