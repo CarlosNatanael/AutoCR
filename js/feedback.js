@@ -1006,7 +1006,7 @@ function* check_notes_missing_size(notes)
 				</ul>);
 }
 
-const NUMERIC_RE = /(0x)?([0-9a-f]{2,})\b/gi;
+const NUMERIC_RE = /\b(0x)?([0-9a-f]{2,})\b/gi;
 function* check_notes_enum_hex(notes)
 {
 	for (const note of notes) if (note.enum)
