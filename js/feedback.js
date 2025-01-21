@@ -431,6 +431,10 @@ function generate_set_stats(set)
 
 	const achievements = set.getAchievements();
 	const leaderboards = set.getLeaderboards();
+	
+	let all_logic_stats = [];
+	for (const ach of achievements) all_logic_stats.push(ach.feedback.stats);
+	for (const lb of leaderboards) all_logic_stats.push(...Leaderboard.COMPONENT_TAGS.map(x => lb.feedback.stats[x]));
 
 	// counts of achievement types
 	let achstate = stats.achievement_state = new Map(Object.values(AssetState).map(x => [x, 0]));
@@ -444,9 +448,9 @@ function generate_set_stats(set)
 	stats.avg_points = stats.achievement_count > 0 ? (stats.total_points / stats.achievement_count) : 0;
 
 	// all components used across all achievements
-	stats.all_flags = achievements.reduce((a, e) => a.union(e.feedback.stats.unique_flags), new Set());
-	stats.all_cmps = achievements.reduce((a, e) => a.union(e.feedback.stats.unique_cmps), new Set());
-	stats.all_sizes = achievements.reduce((a, e) => a.union(e.feedback.stats.unique_sizes), new Set());
+	stats.all_flags = all_logic_stats.reduce((a, e) => a.union(e.unique_flags), new Set());
+	stats.all_cmps = all_logic_stats.reduce((a, e) => a.union(e.unique_cmps), new Set());
+	stats.all_sizes = all_logic_stats.reduce((a, e) => a.union(e.unique_sizes), new Set());
 
 	// number of achievements using bit operations, such as BitX and BitCount
 	stats.using_bit_ops = achievements.filter(ach => new Set(ach.feedback.stats.unique_sizes).intersection(BitProficiency).size > 0);

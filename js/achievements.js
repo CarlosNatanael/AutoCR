@@ -136,6 +136,8 @@ class Achievement extends Asset
 
 class Leaderboard extends Asset
 {
+	static COMPONENT_TAGS = ['STA', 'CAN', 'SUB', 'VAL'];
+
 	format;
 	lower_is_better = true;
 	state = null;
