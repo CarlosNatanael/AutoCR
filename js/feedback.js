@@ -659,45 +659,39 @@ function* check_mismatch_notes(logic)
 	}
 }
 
-// TODO: cleanup this mess of a function, jfc
 function* check_priors(logic)
 {
-	function is_acc_value(x, acc)
-	{
-		const z = new Set([x.lhs.type, x.rhs.type]);
-		return z.has(acc) && (z.has(ReqType.VALUE) || z.has(ReqType.FLOAT));
-	}
-
 	for (const [gi, g] of logic.groups.entries())
 	{
 		for (const [ai, a] of g.entries())
 			if (ReqOperand.sameValue(a.lhs, a.rhs) && a.op == '!=')
-				if (new Set([ReqType.MEM, ReqType.PRIOR]).difference(new Set([a.lhs.type, a.rhs.type])).size == 0)
+			{
+				const _a = a.canonicalize();
+				if (_a.lhs.type == ReqType.MEM && _a.rhs.type == ReqType.PRIOR)
 					yield new Issue(Feedback.BAD_PRIOR, a,
 						<ul>
 							<li>A memory value will always be not-equal to its prior, unless the value has never changed.</li>
-							<li>This requirement most likely does not accomplish anything and should probably be removed.</li>
+							<li>This requirement most likely does not accomplish anything and is probably safe to remove.</li>
 						</ul>);
+			}
 
 		for (const [ai, a] of g.entries())
 		{
-			if (a.op == '!=' && is_acc_value(a, ReqType.PRIOR))
-			{
-				const [prior, avalue] = a.lhs.type == ReqType.PRIOR ? [a.lhs, a.rhs] : [a.rhs, a.lhs];
+			const _a = a.canonicalize();
+			if (_a.op == '!=' && _a.lhs.type == ReqType.PRIOR && !_a.rhs.type.addr)
 				for (const [bi, b] of g.entries()) if (ai != bi)
 				{
-					if (b.op == '=' && is_acc_value(b, ReqType.MEM))
+					const _b = b.canonicalize();
+					if (_b.op == '=' && _b.lhs.type == ReqType.MEM && !_b.rhs.type.addr)
 					{
-						const [mem, bvalue] = b.lhs.type == ReqType.MEM ? [b.lhs, b.rhs] : [b.rhs, b.lhs];
-						if (ReqOperand.equals(avalue, bvalue) && ReqOperand.sameValue(mem, prior))
+						if (ReqOperand.equals(_a.rhs, _b.rhs) && ReqOperand.sameValue(_a.lhs, _b.lhs))
 							yield new Issue(Feedback.BAD_PRIOR, a,
 								<ul>
 									<li>The prior comparison will always be true when <code>{b.toAnnotatedString()}</code>, unless the value has never changed.</li>
-									<li>This requirement most likely does not accomplish anything and should probably be removed.</li>
+									<li>This requirement most likely does not accomplish anything and is probably safe to remove.</li>
 								</ul>);
 					}
 				}
-			}
 		}
 	}
 }
