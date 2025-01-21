@@ -692,6 +692,20 @@ function CodeNotesOverview()
 			</ul>
 		</div>
 
+		<button className='float-right' onClick={() => {
+			let delnotes = `1.0.0.0\n${get_game_title()}\n`;
+			for (const note of displaynotes)
+				delnotes += `N0:${toDisplayHex(note.addr)}:""\n`;
+
+			let e = document.createElement('a');
+			e.setAttribute('href', 'data:text/plaincharset=utf-8,' + encodeURIComponent(delnotes));
+			e.setAttribute('download', `${current.id}-User.txt`);
+
+			e.style.display = 'none';
+			document.body.appendChild(e);
+			e.click();
+			document.body.removeChild(e);
+		}}>Quick Delete</button>
 		<CodeNotesTable notes={displaynotes} issues={displayissues} />
 
 		<div className="stats">
