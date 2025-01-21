@@ -527,19 +527,17 @@ class CodeNote
 			let [lhs, ...rhs] = lines[i].split(delim);
 			rhs = rhs.join(delim).trim();
 
-			// skip any decoration at the start of the string (sometimes padding like `---`)
-			lhs = lhs.substring(lhs.search(/(?:0x)?[0-9a-f]{2,}/i));
-
-			for (const key of lhs.split(','))
+			for (const m of lhs.matchAll(/\b(0x)?([0-9a-f]+)\b/gi))
 			{
-				enumerations.push({literal: key.trim(), meaning: rhs});
-				isHex ||= key.match(/[a-f]/i);
+				enumerations.push({literal: m[0], meaning: rhs});
+				isHex ||= m[0].match(/[a-f]/i);
 			}
 		}
 
 		for (let e of enumerations)
 			e.value = Number.parseInt(e.literal, isHex ? 16 : 10);
-		return enumerations.filter(x => !Number.isNaN(x));
+		enumerations = enumerations.filter(x => !Number.isNaN(x));
+		return enumerations.length ? enumerations : null;
 	}
 }
 
