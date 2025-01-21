@@ -31,7 +31,7 @@ document.ondrop = function(event)
 	for (const file of event.dataTransfer.files)
 	{
 		let idregex = file.name.match(/^(\d+)/);
-		let thisid = +idregex[1] || -1;
+		let thisid = +idregex[1] ?? -1;
 		if (thisid != current.id)
 		{
 			current.id = thisid;

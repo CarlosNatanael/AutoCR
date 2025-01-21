@@ -511,7 +511,7 @@ class CodeNote
 		{
 			const m = lines[i].trim().match(ENUMERATION_RE);
 			if (m == null) continue;
-			delim_count.set(m[2], (delim_count.get(m[2]) || 0) + 1);
+			delim_count.set(m[2], (delim_count.get(m[2]) ?? 0) + 1);
 		}
 
 		if (delim_count.size == 0) return null;

@@ -203,7 +203,7 @@ function send_message_to(target)
 
 function get_note(addr, notes = [])
 {
-	const _notes = notes || [];
+	const _notes = notes ?? [];
 	// reverse loop because in the case of overlapping code notes,
 	// the later one is likely more specific
 	for (let i = _notes.length - 1; i >= 0; i--)
@@ -385,11 +385,11 @@ function generate_code_note_stats(notes)
 	stats.author_counts = new Map();
 	for (const note of notes)
 	{
-		stats.author_counts.set(note.author, 1 + (stats.author_counts.get(note.author) || 0));
+		stats.author_counts.set(note.author, 1 + (stats.author_counts.get(note.author) ?? 0));
 		if (note.type != null || note.size != 1)
 		{
 			let type = note.type ? note.type.name : 'Unknown';
-			stats.size_counts.set(type, 1 + (stats.size_counts.get(type) || 0));
+			stats.size_counts.set(type, 1 + (stats.size_counts.get(type) ?? 0));
 		}
 	}
 
@@ -437,7 +437,7 @@ function generate_set_stats(set)
 	for (const ach of achievements) achstate.set(ach.state, achstate.get(ach.state) + 1);
 
 	let achtype = stats.achievement_type = new Map(['', 'progression', 'win_condition', 'missable'].map(x => [x, []]));
-	for (const ach of achievements) achtype.get(ach.achtype || '').push(ach);
+	for (const ach of achievements) achtype.get(ach.achtype ?? '').push(ach);
 
 	// points total and average
 	stats.total_points = achievements.reduce((a, e) => a + e.points, 0);
@@ -1294,7 +1294,7 @@ function assess_code_notes(notes)
 function assess_rich_presence(rp)
 {
 	let res = new Assessment();
-	rp ||= new RichPresence(); // if there is no RP, just use a placeholder
+	rp ??= new RichPresence(); // if there is no RP, just use a placeholder
 
 	res.stats = generate_rich_presence_stats(rp);
 
