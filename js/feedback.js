@@ -1181,7 +1181,7 @@ function* check_duplicate_text(set)
 		);
 }
 
-const LOGIC_TESTS = [
+const BASIC_LOGIC_TESTS = [
 	check_missing_notes,
 	check_mismatch_notes,
 	check_bad_chains,
