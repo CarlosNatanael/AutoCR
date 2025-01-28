@@ -172,10 +172,10 @@ function LogicTable({logic, issues = []})
 			// if it has no type, skip
 			if (!operand.type) return operand.toString();
 			// if this is a memory read, add the code note, if possible
-			else if (operand.type.addr && !skipNote)
+			else if (operand.type.addr)
 			{
 				const note_text = get_note_text(operand.value);
-				if (note_text) return (
+				if (!skipNote && note_text) return (
 					<span className="tooltip">
 						{operand.toValueString()}
 						<span className="tooltip-info">
@@ -183,6 +183,7 @@ function LogicTable({logic, issues = []})
 						</span>
 					</span>
 				);
+				else return operand.toValueString();
 			}
 			// if it is a value, integers need both representations
 			else if (Number.isInteger(operand.value) && operand.type != ReqType.FLOAT)
