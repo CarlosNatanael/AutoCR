@@ -484,16 +484,20 @@ function AchievementSetOverview()
 		return (<>
 			<li>Code Notes:</li>
 			<ul>
-				<li>Missing code notes: {setstats.missing_notes.size}</li>
-				<ul>
-					{[...setstats.missing_notes.entries()].sort(([a, _1], [b, _2]) => a - b)
-						.map(([addr, loc]) => <React.Fragment key={addr}>
-							<li><code>{toDisplayHex(addr)}</code></li>
-							<ul>
-								{loc.map((x, i) => <li key={i}>used in {x}</li>)}
-							</ul>
-						</React.Fragment>)}
-				</ul>
+				<li>
+					<details>
+						<summary>Missing code notes: {setstats.missing_notes.size} (click to expand)</summary>
+						<ul>
+							{[...setstats.missing_notes.entries()].sort(([a, _1], [b, _2]) => a - b)
+								.map(([addr, loc]) => <React.Fragment key={addr}>
+									<li><code>{toDisplayHex(addr)}</code></li>
+									<ul>
+										{loc.map((x, i) => <li key={i}>used in {x}</li>)}
+									</ul>
+								</React.Fragment>)}
+						</ul>
+					</details>
+				</li>
 			</ul>
 		</>);
 	}
@@ -585,7 +589,6 @@ function AchievementSetOverview()
 					<li>Leaderboards with complex/conditional value: {stats.lb_conditional_value}</li>
 				</ul>
 
-				<CodeNotesInfo />
 				<RichPresenceInfo />
 
 				<li>Proficiencies</li>
@@ -607,6 +610,8 @@ function AchievementSetOverview()
 						<li>Achievements using <span title="PauseIf with a hitcount">PauseLocks</span>: {stats.using_pauselock.length} ({stats.using_pauselock_alt_reset.length} with Alt reset)</li>
 					</ul>
 				</ul>
+
+				<CodeNotesInfo />
 			</ul>
 		</div>
 		<AssetFeedback issues={feedback.issues} />
