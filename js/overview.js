@@ -375,6 +375,11 @@ function AchievementInfo({ach})
 	return (<>
 		<div className="main-header">
 			<AchievementBadge ach={ach} />
+			<div>
+				<button className="float-right" onClick={() => copyToClipboard(`[${ach.title}](https://retroachievements.org/achievement/${ach.id})`)}>
+					Copy Markdown Link
+				</button>
+			</div>
 			<h2 className="asset-title">
 				🏆 <span className={`${feedback_targets.has("title") ? 'warn' : ''}`}>{ach.title}</span> ({ach.points})
 			</h2>
