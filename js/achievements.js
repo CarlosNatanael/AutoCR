@@ -189,11 +189,10 @@ class Leaderboard extends Asset
 		return FAST_WORDS.some(x => this.desc.toLowerCase().includes(x) || this.title.toLowerCase().includes(x));
 	}
 
-	isTime() { return this.format.category == "time" || this.#usesFastWords(); }
 	getType()
 	{
 		if (this.#usesFastWords()) return "speedrun";
-		if (this.isTime()) return this.lower_is_better ? "speedrun" : "survival";
+		if (this.format.category == "time") return this.lower_is_better ? "speedrun" : "survival";
 		return this.lower_is_better ? "min score" : "high score";
 	}
 }
