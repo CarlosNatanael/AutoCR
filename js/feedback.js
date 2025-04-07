@@ -107,7 +107,7 @@ const Feedback = Object.freeze({
 		ref: ['https://docs.retroachievements.org/developer-docs/delta-values.html',], },
 	IMPROPER_DELTA: { severity: FeedbackSeverity.INFO, desc: "Proper use of Delta can help identify the precise moment that an achievement should trigger.",
 		ref: ['https://docs.retroachievements.org/developer-docs/delta-values.html',], },
-	BAD_PRIOR: { severity: FeedbackSeverity.WARN, desc: "Invalid use of Prior. See below for more information.",
+	BAD_PRIOR: { severity: FeedbackSeverity.WARN, desc: "Questionable use of Prior. See below for more information.",
 		ref: ['https://docs.retroachievements.org/developer-docs/prior-values.html',], },
 	COMMON_ALT: { severity: FeedbackSeverity.INFO, desc: "If every alt group contains the same bit of logic in common, it can be refactored back into the Core group.",
 		ref: [], },
