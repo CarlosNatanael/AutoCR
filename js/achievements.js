@@ -87,7 +87,13 @@ class Asset
 	author = null;
 	title;
 	desc;
-	constructor() {  }
+	#ref = '';
+	constructor()
+	{
+		this.#ref = crypto.randomUUID();
+	}
+
+	toRefString(){ return `asset-${this.#ref}`; }
 }
 
 class Achievement extends Asset
@@ -322,6 +328,8 @@ class CodeNote
 		if (!this.isProbablePointer())
 			this.enum = CodeNote.parseEnumerations(note);
 	}
+
+	toRefString() { return `note-${this.addr}`; }
 
 	isArray() { return this.size >= (this.type ? this.type.bytes : 1) * 2; }
 

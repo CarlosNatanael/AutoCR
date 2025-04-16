@@ -9,7 +9,7 @@ function tc_minor(word) { return TITLE_CASE_MINORS.has(word); }
 function make_title_case(phrase)
 {
 	function tc(s) { return s.charAt(0).toUpperCase() + s.substring(1); }
-	return phrase.replace(/[0-9'\u2018\u2019\p{Script=Latin}]+/gu, function(x, i)
+	return phrase.replace(/[0-9'\u2018\u2019\p{Script=Latin}\-]+/gu, function(x, i)
 	{
 		if (x == x.toUpperCase()) return x; // assume allcaps for a reason
 		if (i == 0 || i + x.length == phrase.length) return tc(x);
@@ -1234,12 +1234,7 @@ const LEADERBOARD_TESTS = {
 	'STA': LOGIC_TESTS,
 	'CAN': BASIC_LOGIC_TESTS,
 	'SUB': BASIC_LOGIC_TESTS,
-	'VAL': [].concat(
-			[
-				check_source_mod_measured,
-			],
-			BASIC_LOGIC_TESTS,
-		),
+	'VAL': BASIC_LOGIC_TESTS,
 }
 
 function get_leaderboard_issues(lb)

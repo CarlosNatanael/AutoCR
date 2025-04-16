@@ -7,6 +7,19 @@ function clearSelected()
 		e.classList.remove('selected');
 }
 
+function scrollTo(elem) { elem.scrollIntoView({behavior: 'smooth', block: 'nearest'}); }
+
+function selectTab(tab)
+{
+	const ASSETLIST = document.getElementById('asset-list');
+	for (let x of ASSETLIST.getElementsByClassName('selected'))
+		x.classList.remove('selected');
+	tab.classList.add('selected');
+
+	scrollTo(tab);
+	document.getElementById('asset-info').scrollTop = 0;
+}
+
 var current = { id: -1, };
 function reset_loaded()
 {
@@ -149,7 +162,7 @@ function get_note_text(addr)
 	return note_text;
 }
 
-async function copyToClipboard(text)
+async function copy_to_clipboard(text)
 {
 	try {
 		await navigator.clipboard.writeText(text);
@@ -157,6 +170,9 @@ async function copyToClipboard(text)
 		console.error(error.message);
 	}
 }
+
+function jump_to_asset(asset)
+{ document.getElementById('asset-list').getElementsByClassName(asset?.toRefString?.()).item(0)?.click(); }
 
 function LogicTable({logic, issues = []})
 {
@@ -227,7 +243,7 @@ function LogicTable({logic, issues = []})
 			{[...group.entries()].map(([ri, req]) => {
 				let match = [...issues.entries()].filter(([_, issue]) => issue.target == req);
 				let skipNote = ri > 0 && group[ri-1].flag && group[ri-1].flag == ReqFlag.ADDADDRESS;
-				return (<tr key={`g${gi}-r${ri}`} className={match.some(([_, issue]) => issue.type.severity >= FeedbackSeverity.WARN) ? 'warn' : ''}>
+				return (<tr key={`g${gi}-r${ri}`} className={`${match.some(([_, issue]) => issue.type.severity >= FeedbackSeverity.WARN) ? 'warn ' : ''}${req.toRefString()}`}>
 					<td>{ri + 1} {match.map(([ndx, _]) => 
 						<React.Fragment key={ndx}>{' '} <sup key={ndx}>(#{ndx+1})</sup></React.Fragment>)}</td>
 					<td>{req.flag ? req.flag.name : ''}</td>
@@ -251,7 +267,7 @@ function LogicTable({logic, issues = []})
 		<button className="float-right" onClick={() => setIsHex(!isHex)}>
 			Toggle Hex Values
 		</button>
-		<button className="float-right" onClick={() => copyToClipboard(logic.toMarkdown())}>
+		<button className="float-right" onClick={() => copy_to_clipboard(logic.toMarkdown())}>
 			Copy Markdown
 		</button>
 	</div>);
@@ -321,7 +337,10 @@ function IssueList({issues = []})
 	if (issues.length == 0) return null;
 	return (<ul>{issues.map((issue, i) => (
 		<li key={i}>
-			<sup>(#{i+1})</sup> {issue.type.desc}
+			<sup>(<a href="#" onClick={() => {
+				let ctarget = typeof issue.target == 'string' ? `asset-${issue.target}` : issue.target?.toRefString();
+				if (ctarget) scrollTo(document.getElementsByClassName(ctarget).item(0));
+			}}>#{i+1}</a>)</sup> {issue.type.desc}
 			{issue.type.ref.map((ref, i) => <React.Fragment key={i}>
 				<sup key={ref}>[<a href={ref}>ref</a>]</sup>
 			</React.Fragment>)}
@@ -356,15 +375,33 @@ function AssetFeedback({issues = []})
 function SetBadge({href = null})
 {
 	return (<a href={href ? href : `https://retroachievements.org/game/${current.id}`}>
-		<img className="icon" src={current.set && current.set.icon ? current.set.icon : "https://media.retroachievements.org/Images/000001.png"} />
+		<img className="icon float-left" src={current.set && current.set.icon ? current.set.icon : "https://media.retroachievements.org/Images/000001.png"} />
 	</a>);
 }
 
 function AchievementBadge({ach})
 {
 	return (<a href={`https://retroachievements.org/achievement/${ach.id}`}>
-		<img className="icon" src={ach.badge ? ach.badge : "https://media.retroachievements.org/Images/000001.png"} />
+		<img className="icon float-left" src={ach.badge ? ach.badge : "https://media.retroachievements.org/Images/000001.png"} />
 	</a>);
+}
+
+function AchievementCard({ach})
+{
+	let icon = null;
+	if (ach.achtype == 'progression')   icon = <span title="progression">✅</span>;
+	if (ach.achtype == 'win_condition') icon = <span title="win_condition">🏅</span>;
+	if (ach.achtype == 'missable')      icon = <span title="missable">⚠️</span>;
+
+	return (<div className="asset-card" onClick={() => { jump_to_asset(ach); }}>
+		<div>
+			<img className="icon" src={ach.badge ? ach.badge : "https://media.retroachievements.org/Images/000001.png"} />
+		</div>
+		<div>
+			<p>🏆 <strong>{ach.title}</strong> ({ach.points}) {icon}</p>
+			<p><em>{ach.desc}</em></p>
+		</div>
+	</div>);
 }
 
 function AchievementInfo({ach})
@@ -376,7 +413,7 @@ function AchievementInfo({ach})
 		<div className="main-header">
 			<AchievementBadge ach={ach} />
 			<div>
-				<button className="float-right" onClick={() => copyToClipboard(`[${ach.title}](https://retroachievements.org/achievement/${ach.id})`)}>
+				<button className="float-right" onClick={() => copy_to_clipboard(`[${ach.title}](https://retroachievements.org/achievement/${ach.id})`)}>
 					Copy Markdown Link
 				</button>
 			</div>
@@ -452,6 +489,11 @@ function LeaderboardInfo({lb})
 		</div>
 		<div className="stats">
 			<h1>Statistics</h1>
+			<ul>
+				<li>Format: <code>{lb.format.type}</code> ({lb.format.name})</li>
+				<li>Lower is better? {lb.lower_is_better ? 'Yes' : 'No'}</li>
+				<li>Inferred Type: <code>{lb.getType()}</code></li>
+			</ul>
 			<LeaderboardComponentStats />
 		</div>
 		<AssetFeedback issues={feedback.issues} />
@@ -623,6 +665,76 @@ function AchievementSetOverview()
 	</>);
 }
 
+function CodeReviewOverview()
+{
+	const feedback = current.set.feedback;
+	const stats = feedback.stats;
+
+	const achievements = current.set.getAchievements();
+	const leaderboards = current.set.getLeaderboards();
+
+	let set_contents = [
+		[achievements.length, 'achievement'],
+		[leaderboards.length, 'leaderboard'],
+	];
+
+	function AchievementCardList({achs, label})
+	{
+		if (achs.length == 0) return (<>
+			<li>{label}</li>
+			<ul>
+				<li>None</li>
+			</ul>
+		</>);
+
+		return (<li><details>
+			<summary>{label}</summary>
+			<ul>
+				{achs.map(ach => <AchievementCard key={ach.id} ach={ach} />)}
+			</ul>
+		</details></li>);
+	}
+
+	return (<>
+		<div className="main-header">
+			<div className="float-right">
+				<ConsoleIcon />
+			</div>
+			<SetBadge />
+			<h1 className="asset-title">
+				{get_game_title()}
+			</h1>
+			<p>
+				Set contains {set_contents.filter(([c, _]) => c).map(([c, t]) => `${c} ${t}${c == 1 ? '' : 's'}`).join(' and ')}
+			</p>
+		</div>
+		<div>
+			<h1>Basic Toolkit</h1>
+			<ul>
+				<li><code>Mem</code> & <code>Delta</code> Usage</li>
+				<ul>
+					<AchievementCardList
+						achs={achievements.filter(ach => ach.feedback.issues.some(g => g.some(x => x.type == Feedback.MISSING_DELTA)))} 
+						label={<>Assets lacking <code>Delta</code></>}
+					/>
+					<AchievementCardList
+						achs={achievements.filter(ach => ach.feedback.issues.some(g => g.some(x => x.type == Feedback.IMPROPER_DELTA)))}
+						label={<>Assets using <code>Delta</code> improperly or insufficiently</>}
+					/>
+				</ul>
+				<li>Comparison Operators</li>
+				<ul>
+					<li>Comparisons used ({stats.all_cmps.size}): <KeywordList list={[...stats.all_cmps]} /></li>
+					<AchievementCardList
+						achs={achievements.filter(ach => ach.feedback.stats.unique_cmps.size > 1 || !ach.feedback.stats.unique_cmps.has('='))}
+						label={<>Assets using non-equality comparators</>}
+					/>
+				</ul>
+			</ul>
+		</div>
+	</>)
+}
+
 function CodeNotesTable({notes = [], issues = []})
 {
 	function toDisplayHex(addr)
@@ -642,20 +754,21 @@ function CodeNotesTable({notes = [], issues = []})
 				</tr>
 			</thead>
 			<tbody>
-				{notes.map(note => <tr key={note.addr} className={issues.some(x => x.target == note) ? 'warn' : ''}>
-					<td>{toDisplayHex(note.addr)}{note.isArray() ? (<><br/>&#x2010;&nbsp;{toDisplayHex(note.addr + note.size - 1)}</>) : <></>}</td>
-					<td><pre>{note.note}</pre></td>
-					<td>
-						<span className="tooltip">
-							<a href={`https://retroachievements.org/user/${note.author}`}>
-								<img src={`https://media.retroachievements.org/UserPic/${note.author}.png`} width="24" height="24" />
-							</a>
-							<span className="tooltip-info">
-								{note.author}
+				{notes.map(note => (
+					<tr key={note.addr} className={`${issues.some(x => x.target == note) ? 'warn ' : ''}${note.toRefString()}`}>
+						<td>{toDisplayHex(note.addr)}{note.isArray() ? (<><br/>&#x2010;&nbsp;{toDisplayHex(note.addr + note.size - 1)}</>) : <></>}</td>
+						<td><pre>{note.note}</pre></td>
+						<td>
+							<span className="tooltip">
+								<a href={`https://retroachievements.org/user/${note.author}`}>
+									<img src={`https://media.retroachievements.org/UserPic/${note.author}.png`} width="24" height="24" />
+								</a>
+								<span className="tooltip-info">
+									{note.author}
+								</span>
 							</span>
-						</span>
-					</td>
-				</tr>)}
+						</td>
+					</tr>))}
 			</tbody>
 		</table>
 	</div>)
@@ -852,9 +965,19 @@ function SetOverviewTab()
 {
 	if (current.set == null) return null;
 	let warn = SEVERITY_TO_CLASS[current.set.feedback.status()];
-	return (<tr className={`asset-row ${warn}`} onClick={(e) => show_overview(e, <AchievementSetOverview />)}>
+	return (<tr className={`asset-row asset-set-overview ${warn}`} onClick={(e) => show_overview(e, <AchievementSetOverview />)}>
 		<td className="asset-name">
-			🔍 Set Overview
+			🗺️ Set Overview
+		</td>
+	</tr>);
+}
+
+function CodeReviewTab()
+{
+	if (current.set == null) return null;
+	return (<tr className={`asset-row asset-code-review`} onClick={(e) => show_overview(e, <CodeReviewOverview />)}>
+		<td className="asset-name">
+			🔍 Detailed Set Breakdown
 		</td>
 	</tr>);
 }
@@ -863,7 +986,7 @@ function CodeNotesTab()
 {
 	if (current.notes.length == 0) return null;
 	let warn = SEVERITY_TO_CLASS[current.notes.feedback.status()];
-	return (<tr className={`asset-row ${warn}`} onClick={(e) => show_overview(e, <CodeNotesOverview />)}>
+	return (<tr className={`asset-row asset-code-notes ${warn}`} onClick={(e) => show_overview(e, <CodeNotesOverview />)}>
 		<td className="asset-name">
 			📝 Code Notes
 		</td>
@@ -874,7 +997,7 @@ function RichPresenceTab()
 {
 	if (!current.rp) return null;
 	let warn = SEVERITY_TO_CLASS[current.rp.feedback.status()];
-	return (<tr className={`asset-row ${warn}`} onClick={(e) => show_overview(e, <RichPresenceOverview />)}>
+	return (<tr className={`asset-row asset-rich-presence ${warn}`} onClick={(e) => show_overview(e, <RichPresenceOverview />)}>
 		<td className="asset-name">
 			🎮 Rich Presence
 		</td>
@@ -896,7 +1019,7 @@ function AchievementTabs()
 		</tr>
 		{achievements.map((ach) => {
 			let warn = SEVERITY_TO_CLASS[ach.feedback.status()];
-			return (<tr key={`a${ach.id}`} className={`asset-row ${warn}`} onClick={(e) => show_overview(e, <AchievementInfo ach={ach} />)}>
+			return (<tr key={`a${ach.id}`} className={`asset-row ${ach.toRefString()} ${warn}`} onClick={(e) => show_overview(e, <AchievementInfo ach={ach} />)}>
 				<td className="asset-name">
 					🏆 {ach.state.marker}{ach.title} ({ach.points})
 				</td>
@@ -917,7 +1040,7 @@ function LeaderboardTabs()
 		</tr>
 		{leaderboards.map((lb) => {
 			let warn = SEVERITY_TO_CLASS[lb.feedback.status()];
-			return (<tr key={`b${lb.id}`} className={`asset-row ${warn}`} onClick={(e) => show_overview(e, <LeaderboardInfo lb={lb} />)}>
+			return (<tr key={`b${lb.id}`} className={`asset-row ${lb.toRefString()} ${warn}`} onClick={(e) => show_overview(e, <LeaderboardInfo lb={lb} />)}>
 				<td className="asset-name">
 					📊 {lb.state.marker}{lb.title}
 				</td>
@@ -940,6 +1063,7 @@ function SidebarTabs()
 		<SetOverviewTab />
 		<CodeNotesTab />
 		<RichPresenceTab />
+		<CodeReviewTab />
 		<AchievementTabs />
 		<LeaderboardTabs />
 	</>);
@@ -948,10 +1072,7 @@ function SidebarTabs()
 function show_overview(e, node)
 {
 	container.render(node);
-	clearSelected();
-	e.currentTarget.classList.add('selected');
-	e.currentTarget.scrollIntoView({behavior: 'smooth', block: 'nearest'});
-	document.getElementById('asset-info').scrollTop = 0;
+	selectTab(e.currentTarget);
 }
 
 function update()
