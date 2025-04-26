@@ -186,6 +186,12 @@ img.float-left
 	margin: 5px;
 }
 
+.asset-card.warning
+{
+	background-color: #FFCCCC;
+	border-color: #FF0000;
+}
+
 .hidden
 { display: none; }
 

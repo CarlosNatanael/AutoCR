@@ -386,14 +386,14 @@ function AchievementBadge({ach})
 	</a>);
 }
 
-function AchievementCard({ach})
+function AchievementCard({ach, warn})
 {
 	let icon = null;
 	if (ach.achtype == 'progression')   icon = <span title="progression">✅</span>;
 	if (ach.achtype == 'win_condition') icon = <span title="win_condition">🏅</span>;
 	if (ach.achtype == 'missable')      icon = <span title="missable">⚠️</span>;
 
-	return (<div className="asset-card" onClick={() => { jump_to_asset(ach); }}>
+	return (<div className={"asset-card" + (warn ? " warning" : "")} onClick={() => { jump_to_asset(ach); }}>
 		<div>
 			<img className="icon" src={ach.badge ? ach.badge : "https://media.retroachievements.org/Images/000001.png"} />
 		</div>
@@ -642,7 +642,7 @@ function AchievementSetOverview()
 				<ul>
 					<li>Flags used ({stats.all_flags.size}): <KeywordList list={[...stats.all_flags].map(x => x.name)} /></li>
 					<ul>
-						{[...stats.all_flags].sort().map(k => <li key={k.name}><code>{k.name}</code> used in {stats.using_flag.get(k)} achievements</li>)}
+						{[...stats.all_flags].sort().map(k => <li key={k.name}><code>{k.name}</code> used in {stats.using_flag.get(k).size} achievements</li>)}
 						<li>Unused flags: <KeywordList list={[...new Set(Object.values(ReqFlag)).difference(stats.all_flags)].map(x => x.name)} /></li>
 					</ul>
 					<li>Comparisons used ({stats.all_cmps.size}): <KeywordList list={[...stats.all_cmps]} /></li>
@@ -678,21 +678,29 @@ function CodeReviewOverview()
 		[leaderboards.length, 'leaderboard'],
 	];
 
-	function AchievementCardList({achs, label})
+	function AchievementCardList({achs, label, warn = []})
 	{
-		if (achs.length == 0) return (<>
-			<li>{label}</li>
-			<ul>
-				<li>None</li>
-			</ul>
-		</>);
+		let body = achs.map(ach => (
+			<AchievementCard key={ach.id} ach={ach} 
+				warn={ach.feedback.issues.some(g => g.some(issue => warn.includes(issue.type) && issue.type.severity > FeedbackSeverity.PASS))}
+			/>
+		));
 
 		return (<li><details>
-			<summary>{label}</summary>
-			<ul>
-				{achs.map(ach => <AchievementCard key={ach.id} ach={ach} />)}
-			</ul>
+			<summary>{label}: {achs.length} asset{achs.length == 1 ? "" : "s"}</summary>
+			<ul>{body}</ul>
 		</details></li>);
+	}
+
+	function AchievementsByFlag({flag, warn = []})
+	{
+		return (
+			<AchievementCardList
+				achs={[...stats.using_flag.get(flag)]}
+				label={<><code>{flag.name}</code></>}
+				warn={warn}
+			/>
+		);
 	}
 
 	return (<>
@@ -711,23 +719,137 @@ function CodeReviewOverview()
 		<div>
 			<h1>Basic Toolkit</h1>
 			<ul>
+				<li>Comparison Operators used: ({stats.all_cmps.size}): <KeywordList list={[...stats.all_cmps]} /></li>
+				<ul>
+					<AchievementCardList
+						achs={achievements.filter(ach => ach.feedback.stats.unique_cmps.size > 1 || !ach.feedback.stats.unique_cmps.has('='))}
+						label={<>Using non-equality comparators</>}
+					/>
+				</ul>
+				<li>Memory Sizes used ({stats.all_sizes.size}): <KeywordList list={[...stats.all_sizes].map(x => x.name)} /></li>
+				<ul>
+					<AchievementCardList
+						achs={achievements.filter(ach => ach.feedback.stats.unique_sizes.size > 1 || !ach.feedback.stats.unique_cmps.has(MemSize.BYTE))}
+						label={<>Using sizes other than <code>8-bit</code></>}
+						warn={[Feedback.TYPE_MISMATCH, ]}
+					/>
+					<AchievementCardList
+						achs={stats.using_bit_ops}
+						label={<>Using bit operations (<code>BitX</code> or <code>BitCount</code>)</>}
+					/>
+				</ul>
 				<li><code>Mem</code> & <code>Delta</code> Usage</li>
 				<ul>
 					<AchievementCardList
 						achs={achievements.filter(ach => ach.feedback.issues.some(g => g.some(x => x.type == Feedback.MISSING_DELTA)))} 
-						label={<>Assets lacking <code>Delta</code></>}
+						label={<>Lacking <code>Delta</code></>}
 					/>
 					<AchievementCardList
 						achs={achievements.filter(ach => ach.feedback.issues.some(g => g.some(x => x.type == Feedback.IMPROPER_DELTA)))}
-						label={<>Assets using <code>Delta</code> improperly or insufficiently</>}
+						label={<>Using <code>Delta</code> improperly or insufficiently</>}
 					/>
 				</ul>
-				<li>Comparison Operators</li>
+				<AchievementCardList
+					achs={stats.using_alt_groups}
+					label={<>Using Alt groups</>}
+					warn={[Feedback.COMMON_ALT, Feedback.USELESS_ALT, ]}
+				/>
+				<li>Hitcounts</li>
 				<ul>
-					<li>Comparisons used ({stats.all_cmps.size}): <KeywordList list={[...stats.all_cmps]} /></li>
 					<AchievementCardList
-						achs={achievements.filter(ach => ach.feedback.stats.unique_cmps.size > 1 || !ach.feedback.stats.unique_cmps.has('='))}
-						label={<>Assets using non-equality comparators</>}
+						achs={stats.using_checkpoint_hits}
+						label={<>Using Checkpoint hits</>}
+						warn={[Feedback.HIT_NO_RESET, Feedback.RESET_HITCOUNT_1, ]}
+					/>
+					<AchievementCardList
+						achs={stats.using_hitcounts}
+						label={<>Using hitcounts (<code>&gt;1</code>)</>}
+						warn={[Feedback.HIT_NO_RESET, ]}
+					/>
+				</ul>
+				<li>Specific Flags</li>
+				<ul>
+					<AchievementsByFlag
+						flag={ReqFlag.RESETIF}
+						warn={[Feedback.PAUSELOCK_NO_RESET, Feedback.HIT_NO_RESET, Feedback.UUO_RESET, Feedback.RESET_HITCOUNT_1, ]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.PAUSEIF}
+						warn={[Feedback.PAUSELOCK_NO_RESET, Feedback.UUO_PAUSE, Feedback.PAUSING_MEASURED, ]}
+					/>
+				</ul>
+			</ul>
+			<h1>Intermediate Toolkit</h1>
+			<ul>
+				<AchievementCardList
+					achs={achievements.filter(ach => ach.feedback.stats.priors > 0)}
+					label={<>Using <code>Prior</code></>}
+					warn={[Feedback.BAD_PRIOR, ]}
+				/>
+				<li>Specific Flags</li>
+				<ul>
+					<AchievementsByFlag
+						flag={ReqFlag.ANDNEXT}
+						warn={[Feedback.USELESS_ANDNEXT, ]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.ADDHITS}
+						warn={[Feedback.HIT_NO_RESET, ]}
+					/>
+				</ul>
+			</ul>
+			<h1>Advanced Toolkit</h1>
+			<ul>
+				<li>PauseLocks</li>
+				<ul>
+					<AchievementCardList
+						achs={stats.using_pauselock}
+						label={<>PauseLocks</>}
+						warn={[Feedback.PAUSELOCK_NO_RESET, ]}
+					/>
+					<AchievementCardList
+						achs={stats.using_pauselock_alt_reset}
+						label={<>PauseLocks (with Alt resets)</>}
+						warn={[Feedback.PAUSELOCK_NO_RESET, ]}
+					/>
+				</ul>
+				<li>Specific Flags</li>
+				<ul>
+					<AchievementsByFlag
+						flag={ReqFlag.RESETNEXTIF}
+						warn={[Feedback.PAUSELOCK_NO_RESET, Feedback.HIT_NO_RESET, Feedback.UUO_RNI, ]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.SUBHITS}
+						warn={[Feedback.HIT_NO_RESET, ]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.ADDADDRESS}
+						warn={[Feedback.STALE_ADDADDRESS, ]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.ADDSOURCE}
+						warn={[]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.SUBSOURCE}
+						warn={[]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.MEASURED}
+						warn={[Feedback.PAUSING_MEASURED, ]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.MEASUREDIF}
+						warn={[]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.TRIGGER}
+						warn={[]}
+					/>
+					<AchievementsByFlag
+						flag={ReqFlag.ORNEXT}
+						warn={[]}
 					/>
 				</ul>
 			</ul>

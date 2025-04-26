@@ -461,10 +461,10 @@ function generate_set_stats(set)
 	stats.using_pauselock_alt_reset = achievements.filter(ach => ach.feedback.stats.pauselock_alt_reset > 0);
 
 	// count of achievements using each flag type
-	stats.using_flag = new Map(Object.values(ReqFlag).map(x => [x, 0]));
+	stats.using_flag = new Map(Object.values(ReqFlag).map(x => [x, new Set()]));
 	for (const ach of achievements)
 		for (const flag of ach.feedback.stats.unique_flags)
-			stats.using_flag.set(flag, stats.using_flag.get(flag) + 1);
+			stats.using_flag.get(flag).add(ach);
 
 	// count leaderboard types
 	let lbtype = stats.leaderboard_type = new Map();
