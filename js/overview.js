@@ -840,6 +840,10 @@ function CodeReviewOverview()
 						warn={[Feedback.PAUSING_MEASURED, ]}
 					/>
 					<AchievementsByFlag
+						flag={ReqFlag.MEASUREDP}
+						warn={[Feedback.PAUSING_MEASURED, ]}
+					/>
+					<AchievementsByFlag
 						flag={ReqFlag.MEASUREDIF}
 						warn={[]}
 					/>
