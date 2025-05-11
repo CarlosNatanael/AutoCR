@@ -813,6 +813,11 @@ function CodeReviewOverview()
 						warn={[Feedback.PAUSELOCK_NO_RESET, ]}
 					/>
 				</ul>
+				<AchievementCardList
+					achs={achievements.filter(ach => ach.feedback.stats.mem_del > 0)}
+					label={<>Using a <code>Mem</code> &ne; <code>Delta</code> counter</>}
+					warn={[]}
+				/>
 				<li>Specific Flags</li>
 				<ul>
 					<AchievementsByFlag
@@ -856,6 +861,11 @@ function CodeReviewOverview()
 						warn={[]}
 					/>
 				</ul>
+				<AchievementCardList
+					achs={achievements.filter(ach => [...ach.feedback.stats.source_modification.values()].some(x => x > 0))}
+					label={<>Using source modification</>}
+					warn={[]}
+				/>
 			</ul>
 		</div>
 	</>)
