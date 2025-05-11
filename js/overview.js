@@ -867,6 +867,19 @@ function CodeReviewOverview()
 					warn={[]}
 				/>
 			</ul>
+			<h1>Other Details</h1>
+			<ul>
+				<AchievementCardList
+					achs={achievements.filter(ach => ach.points == 25)}
+					label={<>Achievements worth 25 points</>}
+					warn={[]}
+				/>
+				<AchievementCardList
+					achs={achievements.filter(ach => ach.points > 25)}
+					label={<>Achievements worth &gt;25 points</>}
+					warn={[]}
+				/>
+			</ul>
 		</div>
 	</>)
 }
