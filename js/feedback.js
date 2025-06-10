@@ -279,6 +279,7 @@ function generate_logic_stats(logic)
 	stats.unique_flags = new Set(logic.getFlags());
 	stats.unique_cmps = new Set(comparisons);
 	stats.unique_sizes = new Set(logic.getMemSizes().map(x => BitProficiency.has(x) ? MemSize.BYTE : x));
+	stats.unique_sizes_all = new Set(logic.getMemSizes());
 
 	// list of all chained requirements
 	let chains = [];
@@ -450,7 +451,7 @@ function generate_set_stats(set)
 	stats.all_sizes = all_logic_stats.reduce((a, e) => a.union(e.unique_sizes), new Set());
 
 	// number of achievements using bit operations, such as BitX and BitCount
-	stats.using_bit_ops = achievements.filter(ach => new Set(ach.feedback.stats.unique_sizes).intersection(BitProficiency).size > 0);
+	stats.using_bit_ops = achievements.filter(ach => new Set(ach.feedback.stats.unique_sizes_all).intersection(BitProficiency).size > 0);
 
 	// number of achievements using each feature
 	stats.using_alt_groups = achievements.filter(ach => ach.feedback.stats.alt_groups > 0);
@@ -944,7 +945,7 @@ function HighlightedFeedback({text, pattern})
 const EMOJI_RE = /(\p{Emoji_Presentation})/gu;
 const TYPOGRAPHY_PUNCT = /([\u2018\u2019\u201C\u201D])/gu;
 const FOREIGN_RE = /([\p{Script=Arabic}\p{Script=Armenian}\p{Script=Bengali}\p{Script=Bopomofo}\p{Script=Braille}\p{Script=Buhid}\p{Script=Canadian_Aboriginal}\p{Script=Cherokee}\p{Script=Cyrillic}\p{Script=Devanagari}\p{Script=Ethiopic}\p{Script=Georgian}\p{Script=Greek}\p{Script=Gujarati}\p{Script=Gurmukhi}\p{Script=Han}\p{Script=Hangul}\p{Script=Hanunoo}\p{Script=Hebrew}\p{Script=Hiragana}\p{Script=Inherited}\p{Script=Kannada}\p{Script=Katakana}\p{Script=Khmer}\p{Script=Lao}\p{Script=Limbu}\p{Script=Malayalam}\p{Script=Mongolian}\p{Script=Myanmar}\p{Script=Ogham}\p{Script=Oriya}\p{Script=Runic}\p{Script=Sinhala}\p{Script=Syriac}\p{Script=Tagalog}\p{Script=Tagbanwa}\p{Script=Tamil}\p{Script=Telugu}\p{Script=Thaana}\p{Script=Thai}\p{Script=Tibetan}\p{Script=Yi}]+)/gu;
-const NON_ASCII_RE = /([^\x00-\x7F]+)/g;
+const NON_ASCII_RE = /([^\x00-\x7F\xA5\xA3]+)/g;
 
 function* check_writing_mistakes(asset)
 {
