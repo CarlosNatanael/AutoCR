@@ -822,7 +822,7 @@ function CodeReviewOverview()
 				<li>Memory Sizes used ({stats.all_sizes.size}): <KeywordList list={[...stats.all_sizes].map(x => x.name)} /></li>
 				<ul>
 					<AchievementCardList
-						achs={achievements.filter(ach => ach.feedback.stats.unique_sizes.size > 1 || !ach.feedback.stats.unique_cmps.has(MemSize.BYTE))}
+						achs={achievements.filter(ach => ach.feedback.stats.unique_sizes.size > 1 || !ach.feedback.stats.unique_sizes.has(MemSize.BYTE))}
 						label={<>Using sizes other than <code>8-bit</code></>}
 						warn={[Feedback.TYPE_MISMATCH, ]}
 					/>
