@@ -559,6 +559,11 @@ function* check_deltas(logic)
 	const PAUSERESET = new Set([ReqFlag.RESETIF, ReqFlag.RESETNEXTIF, ReqFlag.PAUSEIF]);
 	let delta_groups = logic.groups.map((g, gi) =>
 	{
+		// If the group contains an always-false condition, it can never trigger.
+		// Therefore, it doesn't need a delta. Consider it "valid" for this check.
+		if (g.some(req => req.isAlwaysFalse()))
+			return true;
+
 		let has_delta = false;
 		let _prefix = '';
 
