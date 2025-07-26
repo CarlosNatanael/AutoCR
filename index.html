@@ -11,6 +11,13 @@
 		<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 	</head>
 	<body>
+		<div id="theme-switcher">
+			<label class="switch">
+				<input type="checkbox" id="theme-toggle-checkbox">
+				<span class="slider"></span>
+			</label>
+		</div>
+
 		<div id="container">
 			<div id="asset-list">
 				<table>
@@ -66,5 +73,45 @@
 		<script src="js/feedback.js" type="text/babel"></script>
 		<script src="js/overview.js" type="text/babel"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha512-ZwR1/gSZM3ai6vCdI+LVF1zSq/5HznD3ZSTk7kajkaj4D292NLuduDCO1c/NT8Id+jE58KYLKT7hXnbtryGmMg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+		<script>
+			(function() {
+				const themeToggle = document.getElementById('theme-toggle-checkbox');
+				const body = document.body;
+
+				function setTheme(themeName) {
+					localStorage.setItem('theme', themeName);
+					if (themeName === 'dark') {
+						body.classList.add('dark-theme');
+						themeToggle.checked = true;
+					} else {
+						body.classList.remove('dark-theme');
+						themeToggle.checked = false;
+					}
+				}
+
+				function toggleTheme() {
+					if (body.classList.contains('dark-theme')) {
+						setTheme('light');
+					} else {
+						setTheme('dark');
+					}
+				}
+
+				themeToggle.addEventListener('change', toggleTheme);
+
+				// Set initial theme on page load
+				const savedTheme = localStorage.getItem('theme');
+				const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+				if (savedTheme) {
+					setTheme(savedTheme);
+				} else if (prefersDark) {
+					setTheme('dark');
+				} else {
+					setTheme('light');
+				}
+			})();
+		</script>
 	</body>
 </html>

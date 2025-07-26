@@ -238,21 +238,135 @@ function get_game_title()
 	return null;
 }
 
-function get_note_text(addr)
+/**
+ * Parses a multi-line code note to find the specific block of text corresponding to a chain of offsets.
+ * @param {string} full_note - The entire text of the code note.
+ * @param {number[]} offsets - An array of numerical offsets to follow into the note.
+ * @returns {string} The relevant block of text for the final offset.
+ */
+function find_relevant_note_text(full_note, offsets) {
+    let lines = full_note.split(/\r\n|\n/);
+    let current_search_space = lines;
+    // Default to the first line if nothing else is found.
+    let last_found_block = [lines[0]];
+
+    if (offsets.length === 0) {
+        return last_found_block.join('\n');
+    }
+
+    // This regex will find lines starting with optional dots or pluses and a +0x... offset.
+    // It captures the indentation, the hex value, and the rest of the line.
+    const offset_line_re = /^(\s*[\.\+]*)\+0x([a-f0-9]+)\s*\|(.*)$/i;
+
+    for (const target_offset of offsets) {
+        let block_for_next_iteration = null;
+
+        for (let i = 0; i < current_search_space.length; i++) {
+            const line = current_search_space[i];
+            const match = line.trim().match(offset_line_re);
+
+            if (match) {
+                const line_offset_val = parseInt(match[2], 16);
+
+                if (line_offset_val === target_offset) {
+                    // We found the starting line for our target offset.
+                    const start_indentation = (match[1] || '').replace(/\s/g, '').length;
+                    
+                    // Now, find where this block ends. A block ends when we encounter
+                    // another offset at the same or a lesser indentation level.
+                    let end_of_block_index = i + 1;
+                    while (end_of_block_index < current_search_space.length) {
+                        const next_line = current_search_space[end_of_block_index];
+                        const next_match = next_line.trim().match(offset_line_re);
+                        if (next_match) {
+                            const next_indentation = (next_match[1] || '').replace(/\s/g, '').length;
+                            if (next_indentation <= start_indentation) {
+                                break; // The next block starts, so our current block ends here.
+                            }
+                        }
+                        end_of_block_index++;
+                    }
+
+                    const found_block = current_search_space.slice(i, end_of_block_index);
+                    last_found_block = found_block;
+                    block_for_next_iteration = found_block;
+                    break; // Found the block for this offset, move to the next offset.
+                }
+            }
+        }
+
+        if (block_for_next_iteration) {
+            // Set the search space for the next offset to be the block we just found.
+            current_search_space = block_for_next_iteration;
+        } else {
+            // We couldn't find the target_offset in the current space, so we must stop.
+            break;
+        }
+    }
+    
+    return last_found_block.join('\n');
+}
+
+function get_note_text(addr, chainInfo = [])
 {
-	let note = get_note(addr, current.notes);
+	let note, base_addr, offsets_in_chain;
+	
+	if (chainInfo.length > 0) {
+		// This is a chained address from the logic table
+		const base_obj = chainInfo[0];
+		note = get_note(base_obj.value, current.notes);
+		base_addr = base_obj.value;
+		offsets_in_chain = [
+			...chainInfo.slice(1).map(c => c.value),
+			addr // The currently hovered operand's value is the final offset.
+		];
+	} else {
+		// This is a direct lookup or an indirect lookup without a chain
+		note = get_note(addr, current.notes);
+		if (note && addr !== note.addr) {
+			base_addr = note.addr;
+			offsets_in_chain = [addr - note.addr];
+		} else {
+			// It's a direct hover on a base address, no offsets.
+			return note ? note.note : null;
+		}
+	}
+	
 	if (!note) return null;
 
-	let note_text = "";
-	let relevant_text = note.note;
-	if (addr != note.addr)
-	{
-		let base = '0x' + note.addr.toString(16).padStart(8, '0');
-		let offset = '0x' + (addr - note.addr).toString(16);
-		note_text += `[Indirect ${base} + ${offset}]\n`;
+	// Build the header for the tooltip
+	const base_hex = '0x' + base_addr.toString(16);
+	const offsets_str = offsets_in_chain.map(o => `+0x${o.toString(16)}`).join(' ');
+	const header = `[Indirect from ${base_hex} ${offsets_str}]\n`;
+	
+	// Find the entire relevant sub-tree for the full chain
+	const subtree_text = find_relevant_note_text(note.note, offsets_in_chain);
+	const subtree_lines = subtree_text.split(/\r\n|\n/);
+
+	// Now, trim this sub-tree to only include the description for the current level,
+	// stopping before any sub-offsets.
+	
+	// The first line of the subtree is the definition line for our current offset.
+	// We want to extract the description part of it.
+	const first_line_text = (subtree_lines[0] || '').replace(/^.*\|/, '').trim();
+	let display_lines = [first_line_text];
+	
+	// Look at the following lines and add them to the description until a sub-offset is found.
+	for (let i = 1; i < subtree_lines.length; i++) {
+		const line = subtree_lines[i];
+		const trimmed_line = line.trim();
+		
+		// A sub-offset is marked by starting with '.' or '+'.
+		if (trimmed_line.startsWith('.') || trimmed_line.startsWith('+')) {
+			break; // Stop, we've reached a child offset.
+		}
+		
+		display_lines.push(line);
 	}
-	note_text += relevant_text;
-	return note_text;
+	
+	const final_description = display_lines.join('\n');
+	
+	return header + final_description;
 }
 
 async function copy_to_clipboard(text)
@@ -267,93 +381,119 @@ async function copy_to_clipboard(text)
 function jump_to_asset(asset)
 { document.getElementById('asset-list').getElementsByClassName(asset?.toRefString?.()).item(0)?.click(); }
 
+function OperandCells({operand, skipNote = false, chainInfo = []})
+{
+	function OperandValue()
+	{
+		if (operand == null) return null;
+		// if it has no type, skip
+		if (!operand.type) return operand.toString();
+		// if this is a memory read, add the code note, if possible
+		else if (operand.type.addr)
+		{
+			const note_text = get_note_text(operand.value, chainInfo);
+			if (!skipNote && note_text) return (
+				<span className="tooltip">
+					{operand.toValueString()}
+					<span className="tooltip-info">
+						<pre>{note_text}</pre>
+					</span>
+				</span>
+			);
+			else return operand.toValueString();
+		}
+		// if it is a value, integers need both representations
+		else if (Number.isInteger(operand.value) && operand.type != ReqType.FLOAT)
+		{
+			return (<>
+				<span className="in-dec">{operand.value.toString()}</span>
+				<span className="in-hex">0x{operand.value.toString(16).padStart(8, '0')}</span>
+			</>);
+		}
+
+		// if we don't know what to do, just return the value
+		return operand.toString();
+	}
+	return (<>
+		<td>{operand ? operand.type.name : ''}</td>
+		<td>{operand && operand.size ? operand.size.name : ''}</td>
+		<td><OperandValue /></td>
+	</>);
+}
+
+function LogicGroup({group, gi, logic, issues})
+{
+	let header = gi == 0 ? "Core Group" : `Alt Group ${gi}`;
+	if (logic.value) header = `Value Group ${gi+1}`;
+
+	let chain_context = []; // array of {type, value} objects for tracking pointer chains
+
+	return (<>
+		<tr className="group-hdr header">
+			<td colSpan={10}>{header}</td>
+		</tr>
+		<tr className="col-hdr header">
+			<td>id</td>
+			<td>Flag</td>
+			<td>Type</td>
+			<td>Size</td>
+			<td>Mem/Val</td>
+			<td>Cmp/Op</td>
+			<td>Type</td>
+			<td>Size</td>
+			<td>Mem/Val</td>
+			<td>Hits</td>
+		</tr>
+		{[...group.entries()].map(([ri, req]) => {
+			let match = [...issues.entries()].filter(([_, issue]) => issue.target == req);
+			const isAddAddress = req.flag === ReqFlag.ADDADDRESS;
+			
+            // Use the chain context *as it was* before this row.
+            const operand_chain_context_for_this_row = [...chain_context];
+
+			// Update chain context for the *next* row.
+			if (isAddAddress) {
+				// The first AddAddress in a sequence establishes the base.
+				if (chain_context.length === 0 && req.lhs.type.addr) {
+					chain_context.push({ type: 'base', value: req.lhs.value });
+				} else if (req.lhs.type.addr) { // Subsequent AddAddress LHS are offsets.
+					chain_context.push({ type: 'offset', value: req.lhs.value });
+				}
+				// The RHS of an AddAddress is always an offset if it exists.
+				if (req.rhs && req.rhs.type.addr) {
+					chain_context.push({ type: 'offset', value: req.rhs.value });
+				}
+			} else {
+				// This requirement is not part of a chain, so reset the context.
+				chain_context = [];
+			}
+			
+			return (<tr key={`g${gi}-r${ri}`} className={`${match.some(([_, issue]) => issue.type.severity >= FeedbackSeverity.WARN) ? 'warn ' : ''}${req.toRefString()}`}>
+				<td>{ri + 1} {match.map(([ndx, _]) => 
+					<React.Fragment key={ndx}>{' '} <sup key={ndx}>(#{ndx+1})</sup></React.Fragment>)}</td>
+				<td>{req.flag ? req.flag.name : ''}</td>
+				{/* For the LHS operand, pass the context. It's either a base or an offset. */}
+				<OperandCells operand={req.lhs} skipNote={false} chainInfo={operand_chain_context_for_this_row} />
+				<td>{req.op ? req.op : ''}</td>
+				{/* For the RHS operand, it can't be part of the same chain. Treat it as a new lookup. */}
+				<OperandCells operand={req.rhs} skipNote={false} chainInfo={[]} />
+				<td data-hits={req.hits}>{req.hasHits() ? `(${req.hits})` : ''}</td>
+			</tr>);
+		})}
+	</>);
+}
+
+
 function LogicTable({logic, issues = []})
 {
 	const [isHex, setIsHex] = React.useState(false);
 	issues = [].concat(...issues);
 
-	const COLUMNS = 10;
-	function OperandCells({operand, skipNote = false})
-	{
-		function OperandValue()
-		{
-			if (operand == null) return null;
-			// if it has no type, skip
-			if (!operand.type) return operand.toString();
-			// if this is a memory read, add the code note, if possible
-			else if (operand.type.addr)
-			{
-				const note_text = get_note_text(operand.value);
-				if (!skipNote && note_text) return (
-					<span className="tooltip">
-						{operand.toValueString()}
-						<span className="tooltip-info">
-							<pre>{note_text}</pre>
-						</span>
-					</span>
-				);
-				else return operand.toValueString();
-			}
-			// if it is a value, integers need both representations
-			else if (Number.isInteger(operand.value) && operand.type != ReqType.FLOAT)
-			{
-				return (<>
-					<span className="in-dec">{operand.value.toString()}</span>
-					<span className="in-hex">0x{operand.value.toString(16).padStart(8, '0')}</span>
-				</>);
-			}
-
-			// if we don't know what to do, just return the value
-			return operand.toString();
-		}
-		return (<>
-			<td>{operand ? operand.type.name : ''}</td>
-			<td>{operand && operand.size ? operand.size.name : ''}</td>
-			<td><OperandValue /></td>
-		</>);
-	}
-	function LogicGroup({group, gi})
-	{
-		let header = gi == 0 ? "Core Group" : `Alt Group ${gi}`;
-		if (logic.value) header = `Value Group ${gi+1}`;
-
-		return (<>
-			<tr className="group-hdr header">
-				<td colSpan={COLUMNS}>{header}</td>
-			</tr>
-			<tr className="col-hdr header">
-				<td>id</td>
-				<td>Flag</td>
-				<td>Type</td>
-				<td>Size</td>
-				<td>Mem/Val</td>
-				<td>Cmp/Op</td>
-				<td>Type</td>
-				<td>Size</td>
-				<td>Mem/Val</td>
-				<td>Hits</td>
-			</tr>
-			{[...group.entries()].map(([ri, req]) => {
-				let match = [...issues.entries()].filter(([_, issue]) => issue.target == req);
-				let skipNote = ri > 0 && group[ri-1].flag && group[ri-1].flag == ReqFlag.ADDADDRESS;
-				return (<tr key={`g${gi}-r${ri}`} className={`${match.some(([_, issue]) => issue.type.severity >= FeedbackSeverity.WARN) ? 'warn ' : ''}${req.toRefString()}`}>
-					<td>{ri + 1} {match.map(([ndx, _]) => 
-						<React.Fragment key={ndx}>{' '} <sup key={ndx}>(#{ndx+1})</sup></React.Fragment>)}</td>
-					<td>{req.flag ? req.flag.name : ''}</td>
-					<OperandCells operand={req.lhs} skipNote={skipNote} />
-					<td>{req.op ? req.op : ''}</td>
-					<OperandCells operand={req.rhs} skipNote={skipNote} />
-					<td data-hits={req.hits}>{req.hasHits() ? `(${req.hits})` : ''}</td>
-				</tr>);
-			})}
-		</>);
-	}
-
 	return (<div className="logic-table">
 		<table className={isHex ? 'show-hex' : ''}>
 			<tbody>
 				{[...logic.groups.entries()].map(([gi, g]) => {
-					return (<LogicGroup key={gi} group={g} gi={gi} />);
+					return (<LogicGroup key={gi} group={g} gi={gi} logic={logic} issues={issues} />);
 				})}
 			</tbody>
 		</table>
@@ -1208,20 +1348,21 @@ function RecentlyLoaded(data)
 	{
 		const seconds = (Date.now() - timestamp) / 1000;
 		const rtf = new Intl.RelativeTimeFormat();
+		// Polished the output by rounding the time value to produce more natural, integer-based strings.
 		const relTimeString =
 			seconds < 60
-				? rtf.format(-seconds, "second")
+				? rtf.format(Math.round(-seconds), "second")
 				: seconds < 60 * 60
-				? rtf.format(-seconds / 60, "minute")
+				? rtf.format(Math.round(-seconds / 60), "minute")
 				: seconds < 60 * 60 * 24
-				? rtf.format(-seconds / 60 / 60, "hour")
+				? rtf.format(Math.round(-seconds / 60 / 60), "hour")
 				: seconds < 60 * 60 * 24 * 7
-				? rtf.format(-seconds / 60 / 60 / 24, "day")
+				? rtf.format(Math.round(-seconds / 60 / 60 / 24), "day")
 				: seconds < 60 * 60 * 24 * 30
-				? rtf.format(-seconds / 60 / 60 / 24 / 7, "week")
+				? rtf.format(Math.round(-seconds / 60 / 60 / 24 / 7), "week")
 				: seconds < 60 * 60 * 24 * 365
-				? rtf.format(-seconds / 60 / 60 / 24 / 30, "month")
-				: rtf.format(-seconds / 60 / 60 / 24 / 365, "year");
+				? rtf.format(Math.round(-seconds / 60 / 60 / 24 / 30), "month")
+				: rtf.format(Math.round(-seconds / 60 / 60 / 24 / 365), "year");
 		return relTimeString;
 	}
 	return (
