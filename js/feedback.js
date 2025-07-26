@@ -13,7 +13,7 @@ function make_title_case(phrase)
 	{
 		if (x == x.toUpperCase()) return x; // assume allcaps for a reason
 		if (i == 0 || i + x.length == phrase.length) return tc(x);
-		return tc_minor(x) ? x : tc(x);
+		return tc_minor(x.toLowerCase()) ? x.toLowerCase() : tc(x);
 	});
 }
 
@@ -122,6 +122,8 @@ const Feedback = Object.freeze({
 			'https://docs.retroachievements.org/developer-docs/memory-inspector.html',
 			'https://docs.retroachievements.org/guidelines/content/code-notes.html',
 		], },
+	POINTER_COMPARISON: { severity: FeedbackSeverity.INFO, desc: "Comparison between pointer and non-zero value is usually incorrect, unless pointing to data in ROM.",
+		ref: [], },
 	MISSING_ENUMERATION: { severity: FeedbackSeverity.WARN, desc: "A value was used that doesn't match any of the enumerated values in the code note.",
 		ref: ['https://docs.retroachievements.org/guidelines/content/code-notes.html#adding-values-and-labels',], },
 	SOURCE_MOD_MEASURED: { severity: FeedbackSeverity.ERROR, desc: "Placing a source modification on a Measured requirement can cause faulty values in older versions of RetroArch (pre-1.10.1).",
@@ -653,7 +655,7 @@ function* check_mismatch_notes(logic)
 			let lastreport = null;
 			if (!prev_addaddress) for (const operand of [req.lhs, req.rhs])
 			{
-				if (!operand || !operand.type || !operand.type.addr) continue;
+				if (!operand?.type?.addr) continue;
 				const note = get_note(operand.value, current.notes);
 				if (!note) continue;
 
@@ -666,6 +668,27 @@ function* check_mismatch_notes(logic)
 					</ul>);
 			}
 			prev_addaddress = req.flag == ReqFlag.ADDADDRESS;
+		}
+	}
+}
+
+function* check_pointers(logic)
+{
+	// check for pointer comparisons against a value that is non-zero
+	for (const [gi, g] of logic.groups.entries())
+	{
+		for (const [ri, req] of g.entries())
+		{
+			if (!req.lhs?.type?.addr) continue;
+			const note = get_note(req.lhs.value, current.notes);
+			if (!note) continue;
+
+			if (note.isProbablePointer() && req.isComparisonOperator() && req.rhs.type == ReqType.VALUE && req.rhs.value != 0)
+				yield new Issue(Feedback.POINTER_COMPARISON, req,
+					<ul>
+						<li>Accessing <code>{toDisplayHex(operand.value)}</code> as <code>{operand.size.name}</code></li>
+						<li>Matching code note at <code>{toDisplayHex(note.addr)}</code> is marked as <code>{note.type.name}</code></li>
+					</ul>);
 		}
 	}
 }
@@ -1194,6 +1217,7 @@ function* check_duplicate_text(set)
 const BASIC_LOGIC_TESTS = [
 	check_missing_notes,
 	check_mismatch_notes,
+	check_pointers,
 	check_bad_chains,
 	check_priors,
 	check_stale_addaddress,
