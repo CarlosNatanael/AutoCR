@@ -1127,12 +1127,13 @@ function CodeNotesTable({notes = [], issues = []})
 		<table className="code-notes">
 			<thead>
 				<tr className="group-hdr header">
-					<td colSpan="3">Code Notes</td>
+					<td colSpan="4">Code Notes</td>
 				</tr>
 				<tr className="col-hdr header">
 					<td>Address</td>
 					<td>Note</td>
 					<td>Author</td>
+					<td>Assets</td>
 				</tr>
 			</thead>
 			<tbody>
@@ -1150,6 +1151,7 @@ function CodeNotesTable({notes = [], issues = []})
 								</span>
 							</span>
 						</td>
+						<td>{note.assetCount}</td>
 					</tr>))}
 			</tbody>
 		</table>
@@ -1165,9 +1167,11 @@ function CodeNotesOverview()
 	let authors = new Set(current.notes.map(note => note.author));
 	const [authState, setAuthState] = React.useState(Object.fromEntries([...authors].map(a => [a, true])));
 	const [warnsOnly, setWarnsOnly] = React.useState(false);
+	const [hideUnused, setHideUnused] = React.useState(false);
 
 	let displaynotes = current.notes.filter(note => authState[note.author]);
 	if (warnsOnly) displaynotes = displaynotes.filter(note => feedback_targets.has(note))
+	if (hideUnused) displaynotes = displaynotes.filter(note => note.assetCount > 0)
 	let displayissues = feedback.issues.filter(issue => !issue.target || displaynotes.includes(issue.target));
 
 	return (<>
@@ -1191,8 +1195,12 @@ function CodeNotesOverview()
 					</React.Fragment>)}
 				</li>
 				<li>
-					Only show warnings <input type="checkbox" onChange={(e) => {
+					<label htmlFor="warnsOnly">Only show warnings</label><input id="warnsOnly" type="checkbox" onChange={(e) => {
 						setWarnsOnly(e.currentTarget.checked);
+					}} />
+					{" | "}
+					<label htmlFor="hideUnused">Hide unused notes</label><input id="hideUnused" type="checkbox" onChange={(e) => {
+						setHideUnused(e.currentTarget.checked);
 					}} />
 				</li>
 			</ul>
