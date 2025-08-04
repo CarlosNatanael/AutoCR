@@ -395,7 +395,14 @@ function generate_code_note_stats(notes)
 
 	stats.notes_count = notes.length;
 	let asset_addresses = [...current.set.getAchievements().map(e => e.logic.getAddresses()),
-		...current.set.getLeaderboards().map(e => e.logic.getAddresses())];
+		...current.set.getLeaderboards().map(e => e.logic.getAddresses())
+	];
+
+	if (current.rp) {
+		const display_cond_addrs = current.rp.display.map(display => display.condition).filter(cond => cond !== null).flatMap(cond => cond.getAddresses());
+		const lookup_addrs = current.rp.display.flatMap(display => display.lookups).flatMap(lookup => lookup.calc.getAddresses());
+		asset_addresses.push([...display_cond_addrs, ...lookup_addrs]);
+	}
 
 	notes.forEach(note => {
 		note.assetCount = asset_addresses.filter(addrs => addrs.includes(note.addr)).length;

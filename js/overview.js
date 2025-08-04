@@ -1195,11 +1195,11 @@ function CodeNotesOverview()
 					</React.Fragment>)}
 				</li>
 				<li>
-					<label for="warnsOnly">Only show warnings</label><input id="warnsOnly" type="checkbox" onChange={(e) => {
+					<label htmlFor="warnsOnly">Only show warnings</label><input id="warnsOnly" type="checkbox" onChange={(e) => {
 						setWarnsOnly(e.currentTarget.checked);
 					}} />
 					{" | "}
-					<label for="hideUnused">Hide unused notes</label><input id="hideUnused" type="checkbox" onChange={(e) => {
+					<label htmlFor="hideUnused">Hide unused notes</label><input id="hideUnused" type="checkbox" onChange={(e) => {
 						setHideUnused(e.currentTarget.checked);
 					}} />
 				</li>
