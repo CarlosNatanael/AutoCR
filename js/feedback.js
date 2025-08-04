@@ -394,8 +394,14 @@ function generate_code_note_stats(notes)
 	}
 
 	stats.notes_count = notes.length;
-	let all_addresses = current.set.getAchievements().reduce((a, e) => a.concat(e.logic.getAddresses()), []);
-	let used_notes = notes.filter(x => all_addresses.some(y => x.contains(y)));
+	let asset_addresses = [...current.set.getAchievements().map(e => e.logic.getAddresses()),
+		...current.set.getLeaderboards().map(e => e.logic.getAddresses())];
+
+	notes.forEach(note => {
+		note.assetCount = asset_addresses.filter(addrs => addrs.includes(note.addr)).length;
+	});
+
+	let used_notes = notes.filter(x => x.assetCount > 0);
 
 	stats.notes_used = used_notes.length;
 	stats.notes_unused = stats.notes_count - stats.notes_used;
