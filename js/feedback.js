@@ -395,7 +395,7 @@ function generate_code_note_stats(notes)
 
 	stats.notes_count = notes.length;
 	let asset_addresses = [...current.set.getAchievements().map(e => e.logic.getAddresses()),
-		...current.set.getLeaderboards().map(e => e.logic.getAddresses())
+		...current.set.getLeaderboards().map(e => e.components).flatMap(cmps => Object.values(cmps)).map(cmp => cmp.getAddresses())
 	];
 
 	if (current.rp) {
