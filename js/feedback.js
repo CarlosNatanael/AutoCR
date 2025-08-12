@@ -970,7 +970,7 @@ function* check_title_case(asset)
 					<li><a href={`https://titlecaseconverter.com/?style=CMOS&showExplanations=1&keepAllCaps=1&multiLine=1&highlightChanges=1&convertOnPaste=1&straightQuotes=1&title=${q}`}>titlecaseconverter.com</a></li>
 					<li><a href={`https://capitalizemytitle.com/style/Chicago/?title=${q}`}>capitalizemytitle.com</a></li>
 				</ul>
-				<li><em>Warning: automated suggestions don't handle hyphenated or otherwise-separated words gracefully.</em></li>
+				<li><em>Warning: automated suggestions don't handle hyphenated or otherwise-separated words gracefully. When in doubt, please rely on the sites linked above.</em></li>
 			</ul>);
 	}
 }
