@@ -180,7 +180,7 @@ function load_files(fileList)
 				catch (e)
 				{
 					if (e instanceof LogicParseError) alert(e.message);
-					else console.error(e);
+					else throw e;
 				}
 			};
 		else if (file.name.endsWith('.json'))
@@ -195,7 +195,7 @@ function load_files(fileList)
 				catch (e)
 				{
 					if (e instanceof LogicParseError) alert(e.message);
-					else console.error(e);
+					else throw e;
 				}
 			};
 		else if (file.name.endsWith('-Rich.txt'))
@@ -210,7 +210,7 @@ function load_files(fileList)
 				catch (e)
 				{
 					if (e instanceof LogicParseError) alert(e.message);
-					else console.error(e);
+					else throw e;
 				}
 			};
 		else if (file.name.endsWith('-User.txt'))
@@ -225,7 +225,7 @@ function load_files(fileList)
 				catch (e)
 				{
 					if (e instanceof LogicParseError) alert(e.message);
-					else console.error(e);
+					else throw e;
 				}
 			};
 		reader.readAsText(file);
