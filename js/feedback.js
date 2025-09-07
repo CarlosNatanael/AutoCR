@@ -697,11 +697,7 @@ function* check_pointers(logic)
 			if (!note) continue;
 
 			if (note.isProbablePointer() && req.isComparisonOperator() && req.rhs.type == ReqType.VALUE && req.rhs.value != 0)
-				yield new Issue(Feedback.POINTER_COMPARISON, req,
-					<ul>
-						<li>Accessing <code>{toDisplayHex(operand.value)}</code> as <code>{operand.size.name}</code></li>
-						<li>Matching code note at <code>{toDisplayHex(note.addr)}</code> is marked as <code>{note.type.name}</code></li>
-					</ul>);
+				yield new Issue(Feedback.POINTER_COMPARISON, req); // TODO: provide better feedback
 		}
 	}
 }
@@ -1295,6 +1291,7 @@ function get_leaderboard_issues(lb)
 
 function assess_achievement(ach)
 {
+	console.log('assessing', ach);
 	let res = new Assessment();
 
 	res.stats = generate_logic_stats(ach.logic);
