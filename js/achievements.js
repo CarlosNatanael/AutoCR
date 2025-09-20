@@ -220,7 +220,16 @@ class AchievementSet
 		this.icon = json.ImageIconURL;
 		this.console = json.ConsoleID in ConsoleMap ? ConsoleMap[json.ConsoleID] : null;
 
-		for (const [i, x] of json.Achievements.entries())
+		let achJson = [], ldbJson = [];
+		if ('Achievements' in json) achJson.push(...json.Achievements);
+		if ('Leaderboards' in json) ldbJson.push(...json.Leaderboards);
+		if ('Sets' in json) for (let set of json.Sets)
+		{
+			achJson.push(...set.Achievements);
+			ldbJson.push(...set.Leaderboards);
+		}
+
+		for (const [i, x] of achJson.entries())
 		{
 			if (x.Title.toUpperCase().includes('[VOID]')) continue;
 			let ach = Achievement.fromJSON(x);
@@ -230,7 +239,7 @@ class AchievementSet
 			this.achievements.set(achIdx, ach);
 		}
 
-		for (let [i, x] of json.Leaderboards.entries())
+		for (let [i, x] of ldbJson.entries())
 		{
 			if (x.Hidden || x.Title.toUpperCase().includes('[VOID]')) continue;
 			let lb = Leaderboard.fromJSON(x);

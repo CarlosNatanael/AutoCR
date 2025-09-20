@@ -1291,7 +1291,6 @@ function get_leaderboard_issues(lb)
 
 function assess_achievement(ach)
 {
-	console.log('assessing', ach);
 	let res = new Assessment();
 
 	res.stats = generate_logic_stats(ach.logic);
