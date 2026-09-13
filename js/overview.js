@@ -835,6 +835,45 @@ function AchievementInfo({ach}) {
 			<LogicExplanation asset={ach} groups={ach.logic.groups} showDecimal={!isHex} />
 		</CollapsibleExplainer>
 
+		<CollapsibleExplainer title="Raw Logic">
+			<div style={{ position: 'relative', padding: '10px', backgroundColor: '#1e222a' }}>
+				<button 
+					onClick={() => copy_to_clipboard(ach.logic.mem)} 
+					style={{ 
+						position: 'absolute', 
+						top: '20px', 
+						right: '20px', 
+						padding: '4px 10px', 
+						fontSize: '12px',
+						zIndex: 10 
+					}}
+				>
+					Copy Raw
+				</button>
+				
+				<textarea 
+					readOnly 
+					value={ach.logic.mem} 
+					style={{ 
+						width: '100%', 
+						minHeight: '60px', 
+						backgroundColor: '#0d1117', 
+						color: '#a5d6ff', 
+						border: '1px solid #2e3542', 
+						padding: '15px', 
+						paddingRight: '100px',
+						fontFamily: 'Consolas, monospace', 
+						fontSize: '13px',
+						resize: 'vertical',
+						boxSizing: 'border-box',
+						display: 'block',
+						borderRadius: '4px'
+					}}
+					onClick={(e) => e.target.select()}
+				/>
+			</div>
+		</CollapsibleExplainer>
+
 		<div className="data-table">
 			<LogicTable logic={ach.logic} issues={feedback.issues} isHex={isHex} toggleHex={toggleHex} />
 		</div>
@@ -1560,6 +1599,33 @@ function CodeNotesOverview()
 				</li>
 			</ul>
 		</div>
+
+		<button className='float-right' style={{ marginRight: '10px' }} onClick={() => {
+			let backupTxt = "";
+			
+			for (const note of displaynotes) {
+				// Checks if the type property exists to inject the size tag (e.g., [8-bit])
+				let sizeTag = note.type && note.type.name ? `[${note.type.name}] ` : "";
+				
+				// toDisplayHex is already a local function that formats to the 0x00000000 pattern
+				backupTxt += `${toDisplayHex(note.addr)}: ${sizeTag}${note.note}\n\n`;
+			}
+
+			// Generates the Blob file in memory to force the browser download
+			const blob = new Blob([backupTxt.trim()], { type: 'text/plain' });
+			const url = window.URL.createObjectURL(blob);
+			
+			const e = document.createElement('a');
+			e.style.display = 'none';
+			e.href = url;
+			e.download = `${current.id}-Backup-Notes.txt`; // Names the file with the game ID
+			
+			document.body.appendChild(e);
+			e.click();
+			
+			window.URL.revokeObjectURL(url);
+			document.body.removeChild(e);
+		}}>Download Backup</button>
 
 		<button className='float-right' onClick={() => {
 			let delnotes = `1.0.0.0\n${get_game_title()}\n`;
