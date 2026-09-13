@@ -2289,175 +2289,57 @@ function RichPresenceOverview() {
 
 function BadgeGrid({set = current.set})
 {
-	const PADDING = 10;
-	const ROWLEN = 10;
 	let achs = set.getAchievements();
 
-	const HEIGHT = PADDING + 96 + PADDING + (64 + PADDING) * Math.ceil(achs.length / ROWLEN);
-	const WIDTH = 2 * PADDING + (64 + PADDING) * ROWLEN;
-
-	let canvasRef = React.useRef();
-	const [status, setStatus] = React.useState("⏳ Initializing...");
-	const [isReady, setIsReady] = React.useState(false);
-
-	const handleCopyClick = async () => {
-		if (!isReady) return;
-		
-		setStatus("⚙️ Processing...");
-		const canvas = canvasRef.current;
-		
-		try {
-			canvas.toBlob(async (blob) => {
-				if (!blob) {
-					setStatus("❌ Error");
-					return;
-				}
-				try {
-					const item = new ClipboardItem({ "image/png": blob });
-					await navigator.clipboard.write([item]);
-					setStatus("✅ Copied!");
-					setTimeout(() => setStatus("📋 Copy Image"), 2000);
-				} catch (err) {
-					console.error("Clipboard write failed:", err);
-					setStatus("❌ Too Large?");
-				}
-			}, "image/png");
-		} catch (err) {
-			console.error("Canvas conversion failed:", err);
-			setStatus("❌ Error");
-		}
-	};
-
-	React.useEffect(() => {
-		const canvas = canvasRef.current;
-		if (!canvas) return;
-		// Track if this effect is still active to prevent race conditions on fast set switching
-		let isActive = true;
-
-		const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-		const loadImage = (url) => {
-			return new Promise((resolve) => {
-				const img = new Image();
-				//img.crossOrigin = "Anonymous";
-				img.src = url; 
-
-				img.onload = () => resolve(img);
-				img.onerror = (e) => {
-					console.warn("Failed to load:", url, e);
-					resolve(null);
-				};
-			});
-		};
-
-		const render = async () => {
-			setIsReady(false);
-			
-			// 1. Draw Background
-			ctx.fillStyle = '#2b374a';
-			ctx.fillRect(0, 0, canvas.width, canvas.height);
-			
-			// 2. Draw Icon Backgrounds (Placeholders)
-			ctx.fillStyle = '#111111';
-			ctx.fillRect(PADDING+3, PADDING+3, 96, 96);
-			
-			for (let i = 0; i < achs.length; i++) {
-				let x = 2 * PADDING + (i % ROWLEN) * (64 + PADDING);
-				let y = PADDING + 96 + PADDING + Math.floor(i / ROWLEN) * (64 + PADDING);
-				ctx.fillRect(x+3, y+3, 64, 64);
-			}
-
-			// 3. Draw Text Metadata
-			let authorlist = achs.map(a => a.author).filter(a => a);
-			let authcount = [], authors = new Set(authorlist);
-			for (let auth of authors) authcount.push([auth, authorlist.filter((x) => x == auth).length]);
-			authcount.sort(([a, _1], [b, _2]) => b-a);
-
-			function dropShadow(text, x, y, font=null, maxwidth=10000)
-			{
-				if (font) ctx.font = font;
-				ctx.fillStyle = 'black';
-				ctx.fillText(text, x + 2, y + 2, maxwidth);
-				ctx.fillStyle = 'white';
-				ctx.fillText(text, x, y, maxwidth);
-			}
-
-			ctx.textBaseline = 'top';
-			dropShadow(set.title || "Untitled", 
-				PADDING + 96 + PADDING + 5, PADDING + 5, 'bold 32px serif', WIDTH - (PADDING * 3 + 96));
-			
-			const authorText = authcount.length > 0 ? "Set developed by " + authcount.map(([a, _]) => a).join(', ') : "";
-			dropShadow(authorText, 
-				PADDING + 96 + PADDING + 10, PADDING + 48, '18px serif', WIDTH - (PADDING * 3 + 96));
-
-			if (set.console && set.console.icon) {
-				ctx.textBaseline = 'middle';
-				ctx.textAlign = 'right';
-				dropShadow(set.console.name, WIDTH - (2 * PADDING + 32 + PADDING), PADDING + 96 - 16, '12px serif');
-			}
-
-			// 4. Load Icons (Set & Console) - Parallel
-			const iconPromises = [];
-			if (set.icon) iconPromises.push(loadImage(set.icon).then(img => ({ type: 'set', img })));
-			if (set.console && set.console.icon) {
-				const consoleIconUrl = `https://static.retroachievements.org/assets/images/system/${set.console.icon}.png`;
-				iconPromises.push(loadImage(consoleIconUrl).then(img => ({ type: 'console', img })));
-			}
-
-			const icons = await Promise.all(iconPromises);
-			if (!isActive) return;
-
-			icons.forEach(({ type, img }) => {
-				if (!img) return;
-				if (type === 'set') ctx.drawImage(img, PADDING, PADDING, 96, 96);
-				if (type === 'console') ctx.drawImage(img, WIDTH - 2 * PADDING - 32, PADDING + 96 - 32, 32, 32);
-			});
-
-			// 5. Load Badges in Parallel Batches
-			const BATCH_SIZE = 10;
-			const total = achs.length;
-			let loaded = 0;
-
-			for (let i = 0; i < total; i += BATCH_SIZE) {
-				if (!isActive) return;
-
-				const batch = achs.slice(i, i + BATCH_SIZE);
-				const batchPromises = batch.map((ach, batchIdx) => {
-					const globalIdx = i + batchIdx;
-					if (!ach.badge) return Promise.resolve();
-
-					return loadImage(ach.badge).then(badgeImg => {
-						if (!isActive) return;
-						if (badgeImg) {
-							let x = 2 * PADDING + (globalIdx % ROWLEN) * (64 + PADDING);
-							let y = PADDING + 96 + PADDING + Math.floor(globalIdx / ROWLEN) * (64 + PADDING);
-							ctx.drawImage(badgeImg, x, y, 64, 64);
-						}
-					});
-				});
-
-				await Promise.all(batchPromises);
-				loaded += batch.length;
-				setStatus(`⏳ ${Math.min(100, Math.round((loaded / total) * 100))}%`);
-			}
-
-			if (!isActive) return;
-			setIsReady(true);
-			setStatus("📋 Copy Image");
-		};
-
-		render();
-
-		return () => { isActive = false; };
-
-	}, [set]); 
+	// Lógica original para contar e ordenar os autores do set
+	let authorlist = achs.map(a => a.author).filter(a => a);
+	let authcount = [], authors = new Set(authorlist);
+	for (let auth of authors) authcount.push([auth, authorlist.filter((x) => x == auth).length]);
+	authcount.sort(([a, _1], [b, _2]) => b-a);
+	const authorText = authcount.length > 0 ? "Set developed by " + authcount.map(([a, _]) => a).join(', ') : "";
 
 	return (
-		<div style={{position: 'relative', display: 'inline-block'}}>
-			<button className="copy-btn" onClick={handleCopyClick} disabled={!isReady} style={{display: 'none', opacity: isReady ? 1 : 0.7, cursor: isReady ? 'pointer' : 'wait'}}>
-				{status}
-			</button>
-			<canvas ref={canvasRef} width={WIDTH} height={HEIGHT}></canvas>
+		<div className="classic-badge-board">
+			
+			<div className="classic-badge-header">
+				<img className="game-icon" src={set.icon} alt="Game Icon" />
+				
+				<div className="title-area">
+					<h1>{set.title || "Untitled"}</h1>
+					<p>{authorText}</p>
+				</div>
+				
+				{set.console && (
+					<div className="console-area">
+						<span>{set.console.name}</span>
+						{set.console.icon && (
+							<img 
+								src={`https://static.retroachievements.org/assets/images/system/${set.console.icon}.png`} 
+								width="32" 
+								height="32" 
+								alt={set.console.name} 
+							/>
+						)}
+					</div>
+				)}
+			</div>
+
+			<div className="classic-badge-grid">
+				{achs.map(ach => (
+					<div 
+						key={ach.id} 
+						className="badge-item" 
+						title={`🏆 ${ach.title} (${ach.points})\n${ach.desc}`}
+						onClick={() => jump_to_asset(ach)}
+					>
+						<img 
+							src={ach.badge ? ach.badge : "https://media.retroachievements.org/Images/000001.png"} 
+							alt={ach.title} 
+						/>
+					</div>
+				))}
+			</div>
+
 		</div>
 	);
 }

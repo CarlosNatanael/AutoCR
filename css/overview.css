@@ -1150,3 +1150,85 @@ body.dark-theme .resizer-x:hover, body.dark-theme .resizer-x.active {
 body.autocr-sidebar-fully-hidden #autocr-restore-btn {
 	display: block !important;
 }
+
+.classic-badge-board {
+    background-color: #2b374a;
+    padding: 10px;
+    display: inline-block;
+    border-radius: 4px;
+    color: white;
+    font-family: serif;
+}
+
+.classic-badge-header {
+    display: flex;
+    margin-bottom: 10px;
+}
+
+.classic-badge-header .game-icon {
+    width: 96px;
+    height: 96px;
+    background-color: #111111;
+    padding: 3px; /* Simula o offset do fundo preto */
+    margin-right: 15px;
+}
+
+.classic-badge-header .title-area {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.classic-badge-header h1 {
+    margin: 0;
+    font-size: 32px;
+    font-weight: bold;
+    text-shadow: 2px 2px 0px black;
+}
+
+.classic-badge-header p {
+    margin: 5px 0 0 0;
+    font-size: 18px;
+    text-shadow: 2px 2px 0px black;
+}
+
+.classic-badge-header .console-area {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: flex-end;
+}
+
+.classic-badge-header .console-area span {
+    font-size: 12px;
+    text-shadow: 2px 2px 0px black;
+    margin-bottom: 4px;
+}
+
+.classic-badge-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 64px);
+    gap: 10px;
+}
+
+.classic-badge-grid .badge-item {
+    width: 64px;
+    height: 64px;
+    background-color: #111111;
+    padding: 3px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.classic-badge-grid .badge-item:hover {
+    transform: scale(1.15);
+    z-index: 10;
+    position: relative;
+}
+
+.classic-badge-grid .badge-item img {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
