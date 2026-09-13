@@ -176,9 +176,15 @@ class Asset
 		this.#ref = crypto.randomUUID();
 	}
 
+	isArchived()
+	{
+		const upperTitle = this.title?.toUpperCase() || "";
+		return upperTitle.includes('[VOID]') || upperTitle.includes('[DEMOTED]') || upperTitle.includes('[DEMOTED AS UNWELCOME CONCEPT]') || upperTitle.includes('[DEMOTE]');
+	}
+
 	needsFeedback()
 	{
-		if (this.title.toUpperCase().includes('[VOID]')) return false;
+		if (this.isArchived()) return false;
 		if (this.id >= 101000000 && this.id < 111000000) return false; // emulator warnings
 		return true;
 	}
@@ -316,6 +322,7 @@ class AchievementSet
 	icon = null;
 	console = null;
 	achievements = new Map();
+	archivedAchievements = new Map();
 	leaderboards = new Map();
 
 	constructor() {  }
@@ -340,9 +347,15 @@ class AchievementSet
 		for (const [i, x] of achJson.entries())
 		{
 			let asset = Achievement.fromJSON(x);
-			if (!asset || !asset.needsFeedback()) continue;
+			if (!asset) continue;
+			
 			asset.index = i; // to preserve order from json file
-			this.achievements.set(asset.id || asset.index, asset);
+			
+			if (asset.isArchived()) {
+				this.archivedAchievements.set(asset.id || asset.index, asset);
+			} else if (asset.needsFeedback()) {
+				this.achievements.set(asset.id || asset.index, asset);
+			}
 		}
 
 		for (let [i, x] of ldbJson.entries())
@@ -408,8 +421,13 @@ class AchievementSet
 				default: // achievement
 					asset = Achievement.fromLocal(row);
 					asset.index = i + 1000000; // preserve order from file
-					if (!asset || !asset.needsFeedback()) continue;
-					this.achievements.set(asset.id || asset.index, asset);
+					if (!asset) continue;
+
+					if (asset.isArchived()) {
+						this.archivedAchievements.set(asset.id || asset.index, asset);
+					} else if (asset.needsFeedback()) {
+						this.achievements.set(asset.id || asset.index, asset);
+					}
 					break;
 			}
 		}
@@ -417,6 +435,7 @@ class AchievementSet
 	}
 
 	getAchievements() { return [...this.achievements.values()]; }
+	getArchivedAchievements() { return [...this.archivedAchievements.values()]; }
 	getLeaderboards() { return [...this.leaderboards.values()]; }
 }
 
