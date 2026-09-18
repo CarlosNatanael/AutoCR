@@ -2536,11 +2536,40 @@ function update()
 	current.notes.sort((a, b) => a.addr - b.addr);
 	assess_code_notes(current.notes);
 
+	let qaIssues = [];
+	
+	for (let note of current.notes) {
+		let report = Auditor.auditCodeNote(note);
+		
+		for (let issue of report) {
+			let hexAddr = '0x' + note.addr.toString(16).padStart(8, '0');
+
+			qaIssues.push({
+				target: note,
+				severity: issue.level === "ERROR" ? 3 : 2,
+				type: { 
+					desc: issue.message,
+					ref: ["https://docs.retroachievements.org/Code-Notes/"] 
+				},
+				detail: (
+					<ul>
+						<li>
+							Code note at <code>{hexAddr}</code>: <code>{note.getHeader()}</code>
+						</li>
+					</ul>
+				)
+			});
+		}
+	}
+
+	if (qaIssues.length > 0) {
+		qaIssues.label = "Code Notes";
+		current.notes.feedback.issues.push(qaIssues);
+	}
+
 	// ensure that every achievement and leaderboard has been assessed
-	// don't assume they have already been processed, as code notes might be new
 	for (let ach of current.set.getAchievements()) assess_achievement(ach);
 	
-	// Garante que as arquivadas também recebam feedback para não quebrar a UI
 	if (current.set.getArchivedAchievements) {
 		for (let ach of current.set.getArchivedAchievements()) assess_achievement(ach);
 	}
@@ -2550,14 +2579,11 @@ function update()
 	// assess rich presence
 	assess_rich_presence(current.rp);
 
-	// set assessment relies on other assessments for some stats,
-	// so this should always be the last assessment
+	// set assessment relies on other assessments for some stats
 	assess_set(current.set);
 
 	// re-render the sidebar with any newly-loaded assets
 	sidebar.render(<SidebarTabs />);
-
-	// change document title to match loaded game
 	document.title = '[AutoCR] ' + (get_game_title() ?? "");
 }
 
