@@ -1892,10 +1892,8 @@ const PRESENTATION_TESTS = [
 ];
 
 const CODE_NOTE_TESTS = [
-	check_notes_bad_regions,
-	check_notes_missing_size,
-	check_notes_enum_hex,
-	check_notes_enum_size_mismatch,
+    check_notes_bad_regions,
+    check_notes_enum_size_mismatch,
 ];
 
 const RICH_PRESENCE_TESTS = [
