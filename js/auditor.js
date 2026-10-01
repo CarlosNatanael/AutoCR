@@ -7,13 +7,13 @@ class Auditor {
     static auditCodeNote(codeNote) {
         const issues = [];
         
-        // 1. Audit Header (Format and Description)
+        // 1. Audit Header (Format and Bracket Content)
         const headerIssues = this.auditHeader(codeNote.getHeader());
         issues.push(...headerIssues);
 
-        // 2. Audit Enumerations (Values and Labels)
-        if (codeNote.enum && codeNote.enum.length > 0) {
-            const enumIssues = this.auditEnumerations(codeNote.enum, codeNote.note);
+        // 2. Audit Enumerations (Separators, Hex, and Bits)
+        if (codeNote.note) {
+            const enumIssues = this.auditEnumerations(codeNote.note);
             issues.push(...enumIssues);
         }
 
@@ -24,28 +24,44 @@ class Auditor {
         const issues = [];
         const header = headerText.trim();
 
-        const leftMatch = header.match(/^\[(.+?)\]\s*(.*)$/);
-        const rightMatch = header.match(/^(.*?)\s*\[(.+?)\]\s*$/);
+        // Extrai tudo o que estiver dentro de colchetes na primeira linha
+        const bracketMatches = [...header.matchAll(/\[(.*?)\]/g)];
+        let hasValidSizeBracket = false;
 
-        let description = "";
-        let hasValidSize = false;
+        // Padrões permitidos pela documentação:
+        const validSizeRegex = /^(\d+-bit(?: BE)?(?: BCD)?(?: BE BCD)?|Float(?: BE)?|\d+x\d+ bytes?|\d+ bytes?|General game notes)$/i;
 
-        if (leftMatch) {
-            hasValidSize = true;
-            description = leftMatch[2].trim();
-        } else if (rightMatch && rightMatch[1].trim().length > 0) {
-            hasValidSize = true;
-            description = rightMatch[1].trim();
+        for (const match of bracketMatches) {
+            const innerText = match[1].trim();
+
+            if (innerText.toLowerCase() === "bitflags" || innerText.toLowerCase() === "bit-flags") {
+                issues.push({
+                    level: "ERROR",
+                    rule: "INVALID_BRACKET_BITFLAGS",
+                    message: `"Bitflags" shall not be bracketed.` //
+                });
+            } else if (validSizeRegex.test(innerText)) {
+                hasValidSizeBracket = true;
+            } else {
+                issues.push({
+                    level: "ERROR",
+                    rule: "INVALID_BRACKET_CONTENT",
+                    message: `The tag [${innerText}] is invalid. Brackets must ONLY contain size information (e.g. [8-bit], [16-bit BE], [4x4 bytes]).` //[cite: 13]
+                });
+            }
         }
 
-        if (!hasValidSize) {
+        if (!hasValidSizeBracket) {
             issues.push({
                 level: "ERROR",
                 rule: "SIZE_FORMAT_ERROR",
-                message: "Code notes must have size information."
+                message: "Code notes must have size information." //[cite: 13]
             });
             return issues; 
         }
+
+        // Remove as tags para avaliar apenas a descrição limpa
+        const description = header.replace(/\[.*?\]/g, '').trim();
 
         if (description.length <= 3 || (/^[\w]+$/.test(description) && description.toLowerCase() === "test")) {
             issues.push({
@@ -58,27 +74,56 @@ class Auditor {
         return issues;
     }
 
-    static auditEnumerations(enumerations, fullNoteText) {
+    static auditEnumerations(fullNoteText) {
         const issues = [];
-        // Checks if the developer explicitly mentioned decimal values in the note body
+        const lines = fullNoteText.split(/\r\n|\n/);
         const isDecimalNoted = fullNoteText.toLowerCase().includes("decimal");
 
-        for (const enumItem of enumerations) {
-            const literal = enumItem.literal.trim();
-            
-            // Rule 3: Always prefix hexadecimal values with 0x
-            // If it doesn't start with 0x and is not a float...
-            if (!literal.toLowerCase().startsWith('0x') && !literal.includes('.')) {
-                
-                // If it contains letters a-f, it's definitely hex without 0x.
-                // Or if it's just numbers but the author didn't state it's decimal.
-                const containsHexChars = /[a-f]/i.test(literal);
-                if (containsHexChars || !isDecimalNoted) {
+        // Captura o prefixo estrutural, o valor e o separador usado
+        const enumLineRegex = /^([.\+\s\|]*)(0x[0-9a-fA-F]+|-?\d+(?:\.\d+)?|Bit\s*\d+)\s*([:=|\-]{1,2})\s*(.+)$/i;
+
+        // Inicia em 1 para ignorar a linha do cabeçalho
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+
+            const match = line.match(enumLineRegex);
+            if (match) {
+                const literal = match[2];
+                const separator = match[3];
+
+                // Validação do separador obrigatório "="
+                if (separator !== "=") {
                     issues.push({
-                        level: "WARNING",
-                        rule: "HEX_PREFIX_MISSING",
-                        message: `The value "${literal}" should be prefixed with '0x' if it is hexadecimal, or the note should specify that values are in decimal.` //[cite: 2]
+                        level: "ERROR",
+                        rule: "INVALID_SEPARATOR",
+                        message: `Values must use an '=' sign. Found '${separator}' in "${line}". Do not use colons or dashes.` //[cite: 13]
                     });
+                }
+
+                // Validação rigorosa de bits
+                const bitMatch = literal.match(/^Bit\s*(\d+)$/i);
+                if (bitMatch) {
+                    const bitNum = parseInt(bitMatch[1], 10);
+                    if (bitNum > 7) {
+                        issues.push({
+                            level: "ERROR",
+                            rule: "INVALID_BIT_INDEX",
+                            message: `Treat consecutive bitfields as stand alone 8-bit addresses. Do not note anything as Bit${bitNum}. Use Bit0 through Bit7.` //[cite: 13]
+                        });
+                    }
+                } else {
+                    // Validação do prefixo Hexadecimal
+                    if (!literal.toLowerCase().startsWith('0x') && !literal.includes('.')) {
+                        const containsHexChars = /[a-f]/i.test(literal);
+                        if (containsHexChars || !isDecimalNoted) {
+                            issues.push({
+                                level: "WARNING",
+                                rule: "HEX_PREFIX_MISSING",
+                                message: `The value "${literal}" should be prefixed with '0x' if it is hexadecimal, or the note should specify that values are in decimal.` //[cite: 13]
+                            });
+                        }
+                    }
                 }
             }
         }
