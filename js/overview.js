@@ -2652,41 +2652,6 @@ function update()
     // set assessment relies on other assessments for some stats
     assess_set(current.set);
 
-	// Associates clicks on the warning rows of the main table to jump to the QA
-	setTimeout(() => {
-		const warningRows = document.querySelectorAll('.data-table table tbody tr.warn');
-		warningRows.forEach(row => {
-			const addrCell = row.querySelector('td:first-child');
-			if (addrCell) {
-				const addrText = addrCell.textContent.trim();
-				row.style.cursor = 'pointer';
-
-				const newRow = row.cloneNode(true);
-				row.parentNode.replaceChild(newRow, row);
-				
-				newRow.addEventListener('click', (ev) => {
-					if (ev.target.tagName === 'A') return;
-					const targetId = `qa-issue-${parseInt(addrText, 16)}`;
-					const qaElement = document.getElementById(targetId);
-					
-					if (qaElement) {
-						qaElement.open = true;
-						qaElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-						
-						const innerDiv = qaElement.querySelector('div');
-						if (innerDiv) {
-							const origBorder = innerDiv.style.borderLeftColor;
-							innerDiv.style.borderLeftColor = "#ffaa00";
-							setTimeout(() => {
-								innerDiv.style.borderLeftColor = origBorder;
-							}, 1500);
-						}
-					}
-				});
-			}
-		});
-	}, 300);
-
     // re-render the sidebar with any newly-loaded assets
     sidebar.render(<SidebarTabs />);
     document.title = '[AutoCR] ' + (get_game_title() ?? "");
