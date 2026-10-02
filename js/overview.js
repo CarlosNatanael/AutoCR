@@ -2594,7 +2594,7 @@ function update()
                 suggestedFix = lines.join('\n');
             }
             
-            qaIssues.push({
+			qaIssues.push({
                 target: note,
                 severity: hasError ? 3 : 2,
                 type: { 
@@ -2602,29 +2602,31 @@ function update()
                     ref: ["https://docs.retroachievements.org/Code-Notes/"] 
                 },
                 detail: (
-                    <div style={{ marginTop: "10px" }}>
-                        <strong>Note:</strong>
-                        <pre style={{ background: "rgba(0,0,0,0.1)", padding: "8px", borderLeft: "3px solid #ff4444", whiteSpace: "pre-wrap" }}>
-                            {note.note}
-                        </pre>
+                    <details id={`qa-issue-${note.addr}`} style={{ marginTop: "10px" }}>
+                        <summary style={{ cursor: "pointer", fontWeight: "bold", padding: "4px 0", outline: "none" }}>
+                            Expand details and suggested correction
+                        </summary>
                         
-                        <hr style={{ opacity: 0.2, margin: "10px 0" }} />
-                        
-                        <ul style={{ listStyleType: "none", paddingLeft: 0, margin: "10px 0" }}>
-                            {report.map((issue, idx) => (
-                                <li key={idx} style={{ marginBottom: "6px" }}>
-                                    <strong>[{idx + 1}]</strong> {issue.level === "ERROR" ? "Error:" : "Warning:"} {issue.message}
-                                </li>
-                            ))}
-                        </ul>
-
-                        <hr style={{ opacity: 0.2, margin: "10px 0" }} />
-                        
-                        <strong>Suggested correction:</strong>
-                        <pre style={{ background: "rgba(0,0,0,0.1)", padding: "8px", borderLeft: "3px solid #44ff44", color: "#ccc", whiteSpace: "pre-wrap" }}>
-                            {suggestedFix}
-                        </pre>
-                    </div>
+                        <div style={{ marginTop: "10px", paddingLeft: "12px", borderLeft: "2px solid rgba(255,255,255,0.1)" }}>
+                            <strong>Original Note:</strong>
+                            <pre style={{ background: "rgba(0,0,0,0.1)", padding: "8px", borderLeft: "3px solid #ff4444", whiteSpace: "pre-wrap", marginTop: "6px" }}>
+                                {note.note}
+                            </pre>
+                            
+                            <ul style={{ listStyleType: "none", paddingLeft: 0, margin: "12px 0" }}>
+                                {report.map((issue, idx) => (
+                                    <li key={idx} style={{ marginBottom: "6px" }}>
+                                        <strong>[{idx + 1}]</strong> {issue.level === "ERROR" ? "Error:" : "Warning:"} {issue.message}
+                                    </li>
+                                ))}
+                            </ul>
+                            
+                            <strong>Suggested correction:</strong>
+                            <pre style={{ background: "rgba(0,0,0,0.1)", padding: "8px", borderLeft: "3px solid #44ff44", color: "#ccc", whiteSpace: "pre-wrap", marginTop: "6px" }}>
+                                {suggestedFix}
+                            </pre>
+                        </div>
+                    </details>
                 )
             });
         }
@@ -2649,6 +2651,41 @@ function update()
 
     // set assessment relies on other assessments for some stats
     assess_set(current.set);
+
+	// Associates clicks on the warning rows of the main table to jump to the QA
+	setTimeout(() => {
+		const warningRows = document.querySelectorAll('.data-table table tbody tr.warn');
+		warningRows.forEach(row => {
+			const addrCell = row.querySelector('td:first-child');
+			if (addrCell) {
+				const addrText = addrCell.textContent.trim();
+				row.style.cursor = 'pointer';
+
+				const newRow = row.cloneNode(true);
+				row.parentNode.replaceChild(newRow, row);
+				
+				newRow.addEventListener('click', (ev) => {
+					if (ev.target.tagName === 'A') return;
+					const targetId = `qa-issue-${parseInt(addrText, 16)}`;
+					const qaElement = document.getElementById(targetId);
+					
+					if (qaElement) {
+						qaElement.open = true;
+						qaElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+						
+						const innerDiv = qaElement.querySelector('div');
+						if (innerDiv) {
+							const origBorder = innerDiv.style.borderLeftColor;
+							innerDiv.style.borderLeftColor = "#ffaa00";
+							setTimeout(() => {
+								innerDiv.style.borderLeftColor = origBorder;
+							}, 1500);
+						}
+					}
+				});
+			}
+		});
+	}, 300);
 
     // re-render the sidebar with any newly-loaded assets
     sidebar.render(<SidebarTabs />);
