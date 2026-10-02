@@ -2532,24 +2532,24 @@ function show_overview(e, node)
 
 function update()
 {
-	// assess all code notes
-	current.notes.sort((a, b) => a.addr - b.addr);
-	assess_code_notes(current.notes);
+    // assess all code notes
+    current.notes.sort((a, b) => a.addr - b.addr);
+    assess_code_notes(current.notes);
 
-	let qaIssues = [];
-	
-	for (let note of current.notes) {
-		let report = Auditor.auditCodeNote(note);
-		
-		if (report.length > 0) {
-			let hexAddr = '0x' + note.addr.toString(16).padStart(8, '0');
+    let qaIssues = [];
+    
+    for (let note of current.notes) {
+        let report = Auditor.auditCodeNote(note);
+        
+        if (report.length > 0) {
+            let hexAddr = '0x' + note.addr.toString(16).padStart(8, '0');
 
-			let hasError = report.some(issue => issue.level === "ERROR");
-			
-			let lines = note.note.split(/\r\n|\n/);
-			let suggestedFix = "";
+            let hasError = report.some(issue => issue.level === "ERROR");
+            
+            let lines = note.note.split(/\r\n|\n/);
+            let suggestedFix = "";
 
-				if (lines.length > 0) {
+                if (lines.length > 0) {
                 let header = lines[0];
                 let foundSize = null;
 
@@ -2593,66 +2593,66 @@ function update()
                 }
                 suggestedFix = lines.join('\n');
             }
-			
-			qaIssues.push({
-				target: note,
-				severity: hasError ? 3 : 2,
-				type: { 
-					desc: `[AUTOCR] ${hexAddr} — ${report.length} erro(s)`,
-					ref: ["https://docs.retroachievements.org/Code-Notes/"] 
-				},
-				detail: (
-					<div style={{ marginTop: "10px" }}>
-						<strong>Note:</strong>
-						<pre style={{ background: "rgba(0,0,0,0.1)", padding: "8px", borderLeft: "3px solid #ff4444", whiteSpace: "pre-wrap" }}>
-							{note.note}
-						</pre>
-						
-						<hr style={{ opacity: 0.2, margin: "10px 0" }} />
-						
-						<ul style={{ listStyleType: "none", paddingLeft: 0, margin: "10px 0" }}>
-							{report.map((issue, idx) => (
-								<li key={idx} style={{ marginBottom: "6px" }}>
-									<strong>[{idx + 1}]</strong> {issue.level === "ERROR" ? "Erro:" : "Aviso:"} {issue.message}
-								</li>
-							))}
-						</ul>
+            
+            qaIssues.push({
+                target: note,
+                severity: hasError ? 3 : 2,
+                type: { 
+                    desc: `[AUTOCR] ${hexAddr} — ${report.length} error(s)`,
+                    ref: ["https://docs.retroachievements.org/Code-Notes/"] 
+                },
+                detail: (
+                    <div style={{ marginTop: "10px" }}>
+                        <strong>Note:</strong>
+                        <pre style={{ background: "rgba(0,0,0,0.1)", padding: "8px", borderLeft: "3px solid #ff4444", whiteSpace: "pre-wrap" }}>
+                            {note.note}
+                        </pre>
+                        
+                        <hr style={{ opacity: 0.2, margin: "10px 0" }} />
+                        
+                        <ul style={{ listStyleType: "none", paddingLeft: 0, margin: "10px 0" }}>
+                            {report.map((issue, idx) => (
+                                <li key={idx} style={{ marginBottom: "6px" }}>
+                                    <strong>[{idx + 1}]</strong> {issue.level === "ERROR" ? "Error:" : "Warning:"} {issue.message}
+                                </li>
+                            ))}
+                        </ul>
 
-						<hr style={{ opacity: 0.2, margin: "10px 0" }} />
-						
-						<strong>Suggested correction:</strong>
-						<pre style={{ background: "rgba(0,0,0,0.1)", padding: "8px", borderLeft: "3px solid #44ff44", color: "#ccc", whiteSpace: "pre-wrap" }}>
-							{suggestedFix}
-						</pre>
-					</div>
-				)
-			});
-		}
-	}
+                        <hr style={{ opacity: 0.2, margin: "10px 0" }} />
+                        
+                        <strong>Suggested correction:</strong>
+                        <pre style={{ background: "rgba(0,0,0,0.1)", padding: "8px", borderLeft: "3px solid #44ff44", color: "#ccc", whiteSpace: "pre-wrap" }}>
+                            {suggestedFix}
+                        </pre>
+                    </div>
+                )
+            });
+        }
+    }
 
-	if (qaIssues.length > 0) {
-		qaIssues.label = "Code Notes";
-		current.notes.feedback.issues.push(qaIssues);
-	}
+    if (qaIssues.length > 0) {
+        qaIssues.label = "Code Notes";
+        current.notes.feedback.issues.push(qaIssues);
+    }
 
-	// ensure that every achievement and leaderboard has been assessed
-	for (let ach of current.set.getAchievements()) assess_achievement(ach);
-	
-	if (current.set.getArchivedAchievements) {
-		for (let ach of current.set.getArchivedAchievements()) assess_achievement(ach);
-	}
+    // ensure that every achievement and leaderboard has been assessed
+    for (let ach of current.set.getAchievements()) assess_achievement(ach);
+    
+    if (current.set.getArchivedAchievements) {
+        for (let ach of current.set.getArchivedAchievements()) assess_achievement(ach);
+    }
 
-	for (let lb of current.set.getLeaderboards()) assess_leaderboard(lb);
+    for (let lb of current.set.getLeaderboards()) assess_leaderboard(lb);
 
-	// assess rich presence
-	assess_rich_presence(current.rp);
+    // assess rich presence
+    assess_rich_presence(current.rp);
 
-	// set assessment relies on other assessments for some stats
-	assess_set(current.set);
+    // set assessment relies on other assessments for some stats
+    assess_set(current.set);
 
-	// re-render the sidebar with any newly-loaded assets
-	sidebar.render(<SidebarTabs />);
-	document.title = '[AutoCR] ' + (get_game_title() ?? "");
+    // re-render the sidebar with any newly-loaded assets
+    sidebar.render(<SidebarTabs />);
+    document.title = '[AutoCR] ' + (get_game_title() ?? "");
 }
 
 function load_achievement_set(json)
