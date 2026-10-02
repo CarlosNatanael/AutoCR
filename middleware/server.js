@@ -1,5 +1,11 @@
 import express from 'express';
-import {username, password} from './credentials.js';
+
+const username = process.env.RA_USERNAME;
+const password = process.env.RA_PASSWORD;
+
+if (!username || !password) {
+	throw new Error('RA_USERNAME and RA_PASSWORD must be set. See middleware/.env.example.');
+}
 
 const app = express();
 app.use((req, res, next) =>
@@ -66,7 +72,7 @@ app.get('/pack/:id', async (req, res) =>
 	try {
 		const token = await login();
 		const gameid = parseInt(req.params.id, 10);
-		console.log(`[request] pack ${gameid}, ${token}`);
+		console.log(`[request] pack ${gameid}`);
 		
 		let pack = {};
 		pack.game = await doRequest({ r: 'achievementsets', u: username, t: token, g: gameid });
