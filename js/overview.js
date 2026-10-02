@@ -2541,22 +2541,90 @@ function update()
 	for (let note of current.notes) {
 		let report = Auditor.auditCodeNote(note);
 		
-		for (let issue of report) {
+		if (report.length > 0) {
 			let hexAddr = '0x' + note.addr.toString(16).padStart(8, '0');
 
+			let hasError = report.some(issue => issue.level === "ERROR");
+			
+			let lines = note.note.split(/\r\n|\n/);
+			let suggestedFix = "";
+
+				if (lines.length > 0) {
+                let header = lines[0];
+                let foundSize = null;
+
+                // Extracts size tag (including plurals) and cleans other tags
+                header = header.replace(/\[(.*?)\]/g, (match, innerText) => {
+                    // Identifies bit sizes (accepts plural 'Bits' and normalizes to official singular)
+                    let bitMatch = innerText.match(/^(\d+-bit)(?:s)?((?: BE)?(?: BCD)?(?: BE BCD)?)$/i);
+                    if (bitMatch) {
+                        foundSize = `[${bitMatch[1].toLowerCase()}${bitMatch[2].toUpperCase()}]`; // Ex: [16-bit BE]
+                        return ""; // Removes from original text to reposition at the beginning
+                    }
+                    
+                    // Identifies other valid sizes (bytes, Float)
+                    let otherMatch = innerText.match(/^(Float(?: BE)?|\d+x\d+ bytes?|\d+ bytes?|General game notes)$/i);
+                    if (otherMatch) {
+                        foundSize = `[${innerText}]`;
+                        return "";
+                    }
+
+                    // Returns without brackets for incorrectly marked descriptions
+                    return innerText; 
+                });
+
+                // Removes leftover loose hyphens or colons at the edges
+                header = header.replace(/(^[-:\s]+|[-:\s]+$)/g, '').trim();
+
+                // Assembles the final header with the tag always at the beginning
+                if (foundSize) {
+                    lines[0] = `${foundSize} ${header}`.trim();
+                } else {
+                    lines[0] = `[8-bit] ${header}`.trim();
+                }
+                
+                // Cleans up unwanted double spaces
+                lines[0] = lines[0].replace(/\s{2,}/g, ' ');
+
+                // Fixes the body (enumerations) starting from the second line
+                for (let i = 1; i < lines.length; i++) {
+                    lines[i] = lines[i].replace(/^([.\+\s\|]*)(0x[0-9a-fA-F]+|-?\d+(?:\.\d+)?|Bit\s*\d+)\s*[:\-|]{1,2}\s*/i, '$1$2=');
+                    lines[i] = lines[i].replace(/\[(.*?)\]/g, '$1');
+                }
+                suggestedFix = lines.join('\n');
+            }
+			
 			qaIssues.push({
 				target: note,
-				severity: issue.level === "ERROR" ? 3 : 2,
+				severity: hasError ? 3 : 2,
 				type: { 
-					desc: issue.message,
+					desc: `[AUTOCR] ${hexAddr} — ${report.length} erro(s)`,
 					ref: ["https://docs.retroachievements.org/Code-Notes/"] 
 				},
 				detail: (
-					<ul>
-						<li>
-							Code note at <code>{hexAddr}</code>: <code>{note.getHeader()}</code>
-						</li>
-					</ul>
+					<div style={{ marginTop: "10px" }}>
+						<strong>Note:</strong>
+						<pre style={{ background: "rgba(0,0,0,0.1)", padding: "8px", borderLeft: "3px solid #ff4444", whiteSpace: "pre-wrap" }}>
+							{note.note}
+						</pre>
+						
+						<hr style={{ opacity: 0.2, margin: "10px 0" }} />
+						
+						<ul style={{ listStyleType: "none", paddingLeft: 0, margin: "10px 0" }}>
+							{report.map((issue, idx) => (
+								<li key={idx} style={{ marginBottom: "6px" }}>
+									<strong>[{idx + 1}]</strong> {issue.level === "ERROR" ? "Erro:" : "Aviso:"} {issue.message}
+								</li>
+							))}
+						</ul>
+
+						<hr style={{ opacity: 0.2, margin: "10px 0" }} />
+						
+						<strong>Suggested correction:</strong>
+						<pre style={{ background: "rgba(0,0,0,0.1)", padding: "8px", borderLeft: "3px solid #44ff44", color: "#ccc", whiteSpace: "pre-wrap" }}>
+							{suggestedFix}
+						</pre>
+					</div>
 				)
 			});
 		}
