@@ -29,7 +29,7 @@ class Auditor {
         let hasValidSizeBracket = false;
 
         // Padrões permitidos pela documentação:
-        const validSizeRegex = /^(\d+-bit(?: BE)?(?: BCD)?(?: BE BCD)?|Float(?: BE)?|\d+x\d+ bytes?|\d+ bytes?|General game notes)$/i;
+        const validSizeRegex = /^(\d+-bit(?: BE)?(?: BCD)?(?: BE BCD)?|Float(?: BE)?|\d+x\d+ bytes?|\d+ bytes?|Lower4|Upper4|General game notes)$/i;
 
         for (const match of bracketMatches) {
             const innerText = match[1].trim();

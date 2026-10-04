@@ -2546,14 +2546,14 @@ function update()
 
             let hasError = report.some(issue => issue.level === "ERROR");
             
-            let lines = note.note.split(/\r\n|\n/);
+			let lines = note.note.split(/\r\n|\n/);
             let suggestedFix = "";
 
-                if (lines.length > 0) {
+            if (lines.length > 0) {
                 let header = lines[0];
                 let foundSize = null;
 
-                // Extracts size tag (including plurals) and cleans other tags
+                // Extracts size tag (including plurals, Lower4, Upper4) and cleans other tags
                 header = header.replace(/\[(.*?)\]/g, (match, innerText) => {
                     // Identifies bit sizes (accepts plural 'Bits' and normalizes to official singular)
                     let bitMatch = innerText.match(/^(\d+-bit)(?:s)?((?: BE)?(?: BCD)?(?: BE BCD)?)$/i);
@@ -2562,14 +2562,14 @@ function update()
                         return ""; // Removes from original text to reposition at the beginning
                     }
                     
-                    // Identifies other valid sizes (bytes, Float)
-                    let otherMatch = innerText.match(/^(Float(?: BE)?|\d+x\d+ bytes?|\d+ bytes?|General game notes)$/i);
+                    // Identifies other valid sizes (bytes, Float, Lower4, Upper4, General game notes)
+                    let otherMatch = innerText.match(/^(Float(?: BE)?|\d+x\d+ bytes?|\d+ bytes?|Lower4|Upper4|General game notes)$/i);
                     if (otherMatch) {
                         foundSize = `[${innerText}]`;
                         return "";
                     }
 
-                    // Returns without brackets for incorrectly marked descriptions
+                    // Returns without brackets for incorrectly marked descriptions (like Bitflags)
                     return innerText; 
                 });
 
