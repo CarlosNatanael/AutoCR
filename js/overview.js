@@ -2553,20 +2553,26 @@ function update()
                 let header = lines[0];
                 let foundSize = null;
 
-                // Extracts size tag (including plurals, Lower4, Upper4) and cleans other tags
+				// Extracts size tag (including plurals, Lower4, Upper4, ASCII) and cleans other tags
                 header = header.replace(/\[(.*?)\]/g, (match, innerText) => {
                     // Identifies bit sizes (accepts plural 'Bits' and normalizes to official singular)
                     let bitMatch = innerText.match(/^(\d+-bit)(?:s)?((?: BE)?(?: BCD)?(?: BE BCD)?)$/i);
                     if (bitMatch) {
-                        foundSize = `[${bitMatch[1].toLowerCase()}${bitMatch[2].toUpperCase()}]`; // Ex: [16-bit BE]
-                        return ""; // Removes from original text to reposition at the beginning
+                        foundSize = `[${bitMatch[1].toLowerCase()}${bitMatch[2].toUpperCase()}]`; 
+                        return ""; 
                     }
                     
-                    // Identifies other valid sizes (bytes, Float, Lower4, Upper4, General game notes)
-                    let otherMatch = innerText.match(/^(Float(?: BE)?|\d+x\d+ bytes?|\d+ bytes?|Lower4|Upper4|General game notes)$/i);
+                    // Identifies other valid sizes
+                    let otherMatch = innerText.match(/^(Float(?: BE)?|\d+x\d+ bytes?|\d+ bytes?|Lower4|Upper4|ASCII|General game notes)$/i);
                     if (otherMatch) {
                         foundSize = `[${innerText}]`;
                         return "";
+                    }
+
+                    // Identifies Region tags to keep them intact with brackets
+                    let regionMatch = innerText.match(/^(JP|EU|EUR|US|USA|EUA|ALL|World)$/i);
+                    if (regionMatch) {
+                        return match; // Retorna exatamente como estava, com os colchetes
                     }
 
                     // Returns without brackets for incorrectly marked descriptions (like Bitflags)

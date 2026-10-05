@@ -28,8 +28,11 @@ class Auditor {
         const bracketMatches = [...header.matchAll(/\[(.*?)\]/g)];
         let hasValidSizeBracket = false;
 
-        // Padrões permitidos pela documentação:
-        const validSizeRegex = /^(\d+-bit(?: BE)?(?: BCD)?(?: BE BCD)?|Float(?: BE)?|\d+x\d+ bytes?|\d+ bytes?|Lower4|Upper4|General game notes)$/i;
+        // Padrões de tamanho permitidos pela documentação (agora com ASCII)
+        const validSizeRegex = /^(\d+-bit(?: BE)?(?: BCD)?(?: BE BCD)?|Float(?: BE)?|\d+x\d+ bytes?|\d+ bytes?|Lower4|Upper4|ASCII|General game notes)$/i;
+        
+        // Padrões de região permitidos como metadados extras
+        const validRegionRegex = /^(JP|EU|EUR|US|USA|EUA|ALL|World)$/i;
 
         for (const match of bracketMatches) {
             const innerText = match[1].trim();
@@ -38,15 +41,17 @@ class Auditor {
                 issues.push({
                     level: "ERROR",
                     rule: "INVALID_BRACKET_BITFLAGS",
-                    message: `"Bitflags" shall not be bracketed.` //
+                    message: `"Bitflags" shall not be bracketed.`
                 });
             } else if (validSizeRegex.test(innerText)) {
                 hasValidSizeBracket = true;
+            } else if (validRegionRegex.test(innerText)) {
+                // É uma tag de região válida, logo não fazemos nada (é ignorada pelo validador de erros)
             } else {
                 issues.push({
                     level: "ERROR",
                     rule: "INVALID_BRACKET_CONTENT",
-                    message: `The tag [${innerText}] is invalid. Brackets must ONLY contain size information (e.g. [8-bit], [16-bit BE], [4x4 bytes]).` //[cite: 13]
+                    message: `The tag [${innerText}] is invalid. Brackets must ONLY contain size information (e.g. [8-bit], [16-bit BE], [4x4 bytes]) or valid region codes.`
                 });
             }
         }
@@ -55,7 +60,7 @@ class Auditor {
             issues.push({
                 level: "ERROR",
                 rule: "SIZE_FORMAT_ERROR",
-                message: "Code notes must have size information." //[cite: 13]
+                message: "Code notes must have size information."
             });
             return issues; 
         }
@@ -97,7 +102,7 @@ class Auditor {
                     issues.push({
                         level: "ERROR",
                         rule: "INVALID_SEPARATOR",
-                        message: `Values must use an '=' sign. Found '${separator}' in "${line}". Do not use colons or dashes.` //[cite: 13]
+                        message: `Values must use an '=' sign. Found '${separator}' in "${line}". Do not use colons or dashes.`
                     });
                 }
 
@@ -109,7 +114,7 @@ class Auditor {
                         issues.push({
                             level: "ERROR",
                             rule: "INVALID_BIT_INDEX",
-                            message: `Treat consecutive bitfields as stand alone 8-bit addresses. Do not note anything as Bit${bitNum}. Use Bit0 through Bit7.` //[cite: 13]
+                            message: `Treat consecutive bitfields as stand alone 8-bit addresses. Do not note anything as Bit${bitNum}. Use Bit0 through Bit7.`
                         });
                     }
                 } else {
@@ -120,7 +125,7 @@ class Auditor {
                             issues.push({
                                 level: "WARNING",
                                 rule: "HEX_PREFIX_MISSING",
-                                message: `The value "${literal}" should be prefixed with '0x' if it is hexadecimal, or the note should specify that values are in decimal.` //[cite: 13]
+                                message: `The value "${literal}" should be prefixed with '0x' if it is hexadecimal, or the note should specify that values are in decimal.`
                             });
                         }
                     }
