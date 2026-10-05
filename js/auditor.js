@@ -28,11 +28,11 @@ class Auditor {
         const bracketMatches = [...header.matchAll(/\[(.*?)\]/g)];
         let hasValidSizeBracket = false;
 
-        // Padrões de tamanho permitidos pela documentação (agora com ASCII)
+        // Padrões de tamanho base permitidos pela documentação
         const validSizeRegex = /^(\d+-bit(?: BE)?(?: BCD)?(?: BE BCD)?|Float(?: BE)?|\d+x\d+ bytes?|\d+ bytes?|Lower4|Upper4|ASCII|General game notes)$/i;
         
-        // Padrões de região permitidos como metadados extras
-        const validRegionRegex = /^(JP|EU|EUR|US|USA|EUA|ALL|World)$/i;
+        // Padrões de metadados permitidos como tags secundárias independentes
+        const validMetadataRegex = /^(JP|EU|EUR|US|USA|EUA|ALL|World|BCD|BE)$/i;
 
         for (const match of bracketMatches) {
             const innerText = match[1].trim();
@@ -45,13 +45,13 @@ class Auditor {
                 });
             } else if (validSizeRegex.test(innerText)) {
                 hasValidSizeBracket = true;
-            } else if (validRegionRegex.test(innerText)) {
-                // É uma tag de região válida, logo não fazemos nada (é ignorada pelo validador de erros)
+            } else if (validMetadataRegex.test(innerText)) {
+                // É um metadado válido (região, BCD separado ou BE separado), deixa passar sem erro
             } else {
                 issues.push({
                     level: "ERROR",
                     rule: "INVALID_BRACKET_CONTENT",
-                    message: `The tag [${innerText}] is invalid. Brackets must ONLY contain size information (e.g. [8-bit], [16-bit BE], [4x4 bytes]) or valid region codes.`
+                    message: `The tag [${innerText}] is invalid. Brackets must ONLY contain size information (e.g. [8-bit], [16-bit BE], [4x4 bytes]) or valid modifiers (like regions, BCD, BE).`
                 });
             }
         }

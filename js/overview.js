@@ -2569,9 +2569,9 @@ function update()
                         return "";
                     }
 
-                    // Identifies Region tags to keep them intact with brackets
-                    let regionMatch = innerText.match(/^(JP|EU|EUR|US|USA|EUA|ALL|World)$/i);
-                    if (regionMatch) {
+                    // Identifies Metadata tags (Regions, BCD, BE) to keep them intact with brackets
+                    let metadataMatch = innerText.match(/^(JP|EU|EUR|US|USA|EUA|ALL|World|BCD|BE)$/i);
+                    if (metadataMatch) {
                         return match; // Retorna exatamente como estava, com os colchetes
                     }
 
